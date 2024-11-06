@@ -61,7 +61,10 @@ def init_frozen_language_model(model_path, attn_imp="flash_attention_2"):
         model = Gemma2ForCausalLM.from_pretrained(model_path, attn_implementation=attn_imp, torch_dtype=bf16)
     else:
         raise NotImplementedError
+    
+    model.to('cuda')
     model.cuda().eval()
+    
     for pn, p in model.named_parameters():
         p.requires_grad = False
     tokenizer = AutoTokenizer.from_pretrained(
