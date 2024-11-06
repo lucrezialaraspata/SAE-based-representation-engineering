@@ -21,6 +21,7 @@ logger.setLevel(level=logging.INFO)
 def load_functional_activations_weight(layer_ids, model_name, hiddens_name):
     all_use_context_weight, all_use_parameter_weight = [], []
     all_sae = []
+
     for layer_idx in layer_ids:
         logger.info(f"load function weights layer{layer_idx}")
         sae = load_frozen_sae(layer_idx, model_name)
@@ -66,6 +67,10 @@ def get_patch_hooks(layer_ids, all_use_context_func, all_use_context_indices, al
 
 @torch.inference_mode()
 def get_llama_spare(model_path):
+    
+    print("\n\n-----------")
+    print("[Starting -> Get LLaMa Spare]")
+
     data_name = "nqswap"
     hiddens_name = "grouped_activations"
 
@@ -78,18 +83,38 @@ def get_llama_spare(model_path):
     edit_degree = 2
 
     model_name = os.path.basename(model_path)
+
+    print(f"model_name: {model_name}")
+    print(f"model_path: {model_path}")
+    print(f"layer_ids: {layer_ids}")
+
     model, tokenizer = init_frozen_language_model(model_path)
 
+    print("\n\n-----------")
+    print(f"     - Got Model {model_path} and Tokenizer")
+    print("-----------\n\n")
+
+    print("\n\n-----------")
+    print("[Starting -> Load activation weights]")
     all_use_context_weight, all_use_parameter_weight, all_sae = \
         load_functional_activations_weight(layer_ids, model_name, hiddens_name)
+    print("[END -> Load activation weights] \n\n")
+    
+    print("[Starting -> Select functional activations]")
     all_use_context_func, all_use_parameter_func, all_use_context_indices, all_use_parameter_indices = \
         select_functional_activations(layer_ids, model_name, edit_degree, hiddens_name,
                                       mutual_information_save_name, select_topk_proportion)
+    print("[END -> Select functional activations] \n\n")
+
+    print("[Starting -> Get Patch Hooks]")
     use_context_patch, use_parameter_patch, inspect_module = \
         get_patch_hooks(layer_ids, all_use_context_func, all_use_context_indices,
                         all_use_parameter_func, all_use_parameter_indices, all_sae)
+    print("[END -> Get Patch Hooks] \n\n")
 
+    print("[Starting -> Load Dataset and Memorised Set]")
     data, memorised_set = load_dataset_and_memorised_set(data_name, model_name)
+
     re_odqa_dataset = REODQADataset(
         tokenizer=tokenizer,
         data=data,
@@ -97,6 +122,8 @@ def get_llama_spare(model_path):
         demonstration_pool_size=128,
         task="initial_ICL_with_intervention"
     )
+    print("[END -> Load Dataset and Memorised Set] \n\n")
+    print("-----------\n\n")
 
     return model, tokenizer, model_name, re_odqa_dataset, use_context_patch, use_parameter_patch, inspect_module
 
@@ -191,6 +218,16 @@ def generate_two_answers(test_example, model, tokenizer, model_name, seed, re_od
 def run(test_examples, model_path="meta-llama/Llama-2-7b-hf"):
     model, tokenizer, model_name, re_odqa_dataset, use_context_patch, use_parameter_patch, inspect_module = \
         get_llama_spare(model_path)
+    
+    print("\n\n-----------")
+    print("[Obtained LLaMa Spare]")
+    print(f"model_name: {model_name}")
+    print(f"model_path: {model_path}")
+
+    print("-----------\n\n")
+
+    print("\n\n-----------")
+    print("[START INFERENCE]")
 
     for item in test_examples:
         test_example = item["test_example"]
@@ -199,11 +236,17 @@ def run(test_examples, model_path="meta-llama/Llama-2-7b-hf"):
         test_example["context"] = test_example["context"][:2048]
         test_example["question"] = test_example["question"][:128]
 
+        print("\n\n-----------")
+        print("[Generate Two Answers]")
         spare_outputs = generate_two_answers(
             test_example, model, tokenizer, model_name, seed, re_odqa_dataset, num_demonstrations,
             use_context_patch, use_parameter_patch, inspect_module
         )
         print(json.dumps(spare_outputs, indent=4))
+        print("\n\n-----------")
+
+    print("[END INFERENCE]")
+    print("-----------\n\n")
 
 
 if __name__ == '__main__':
@@ -221,6 +264,12 @@ if __name__ == '__main__':
             }
         }
     ]
+
+    print("\n\n-----------")
+    print("[TEST SAMPLES]")
+    for item in test_examples:
+        print(item["test_example"])
+    print("-----------\n\n")
 
     run(test_examples)
 

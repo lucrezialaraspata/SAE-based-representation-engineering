@@ -55,6 +55,7 @@ def load_model(model_path, flash_attn, not_return_model=False):
 
 def init_frozen_language_model(model_path, attn_imp="flash_attention_2"):
     bf16 = torch.bfloat16
+    
     if "llama" in model_path.lower():
         model = LlamaForCausalLM.from_pretrained(model_path, attn_implementation=attn_imp, torch_dtype=bf16)
     elif "gemma" in model_path:
@@ -67,6 +68,7 @@ def init_frozen_language_model(model_path, attn_imp="flash_attention_2"):
     
     for pn, p in model.named_parameters():
         p.requires_grad = False
+    
     tokenizer = AutoTokenizer.from_pretrained(
         model_path,
         padding_side='left',
