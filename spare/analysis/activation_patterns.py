@@ -5,8 +5,8 @@ import pandas as pd
 from tqdm import tqdm
 import torch
 from spare.utils import load_model, PROJ_DIR
-from spare.datasets.eval_datasets_nqswap import NQSwap
-from spare.datasets.eval_datasets_macnoise import MACNoise
+from spare.local_datasets.eval_datasets_nqswap import NQSwap
+from spare.local_datasets.eval_datasets_macnoise import MACNoise
 from spare.patch_utils import InspectOutputContext
 from spare.analysis.group_instance import get_nqswap_compositions, get_macnoise_compositions
 import seaborn as sns
@@ -81,7 +81,7 @@ def minimum(x, dim=-1):
 def activation_analysis(
         features_to_analyse=None,
         target_layers=None,
-        model_path="meta-llama/Meta-Llama-3-8B",
+        model_path="meta-llama/Llama-3.1-8B",
         none_conflict=False,
         data_name="nqswap",
 ):
@@ -197,7 +197,7 @@ def get_instance_type_latex(instance_set_compositions, instance_id):
     return divide_by_sub_context_type, divide_by_org_context_type
 
 
-def draw_features(model_path="meta-llama/Meta-Llama-3-8B", data_name="nqswap"):
+def draw_features(model_path="meta-llama/Llama-3.1-8B", data_name="nqswap"):
     model_name = model_path.split("/")[-1]
 
     record_dir = PROJ_DIR / "cache_data" / model_name

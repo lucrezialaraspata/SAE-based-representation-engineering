@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from tqdm import tqdm
 from transformers import AutoTokenizer
-from spare.datasets.function_extraction_datasets import REODQADataset, EncodeREODQADataset
+from spare.local_datasets.function_extraction_datasets import REODQADataset, EncodeREODQADataset
 from spare.patch_utils import PatchOutputContext
 from spare.utils import init_frozen_language_model, load_frozen_sae
 from spare.sae import Sae

@@ -1,0 +1,7 @@
+LICENSE
+README.md
+setup.py
+spare.egg-info/PKG-INFO
+spare.egg-info/SOURCES.txt
+spare.egg-info/dependency_links.txt
+spare.egg-info/top_level.txt

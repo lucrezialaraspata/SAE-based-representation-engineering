@@ -19,7 +19,7 @@ export CUDA_VISIBLE_DEVICES=0
 #
 #python -m spare.save_grouped_activations \
 #  --data_name="nqswap" \
-#  --model_path="meta-llama/Meta-Llama-3-8B" \
+#  --model_path="meta-llama/Llama-3.1-8B" \
 #  --load_data_name="grouped_prompts"\
 #  --shots_to_encode 3 4 5 \
 #  --seeds_to_encode 42 43 44 45 46 \

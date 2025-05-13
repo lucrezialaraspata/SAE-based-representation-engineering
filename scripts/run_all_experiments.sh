@@ -27,7 +27,7 @@ python ./scripts/avg_acc.py \
 
 for seed in {42..46}; do
     python ./scripts/run_spare.py \
-      --model_path="meta-llama/Meta-Llama-3-8B" \
+      --model_path="meta-llama/Llama-3.1-8B" \
       --data_name="nqswap" \
       --layer_ids 13 14 15 16 \
       --edit_degree=2.0 \
@@ -40,7 +40,7 @@ for seed in {42..46}; do
 done
 
 python ./scripts/avg_acc.py \
-    --model_path="meta-llama/Meta-Llama-3-8B" \
+    --model_path="meta-llama/Llama-3.1-8B" \
     --data_name="nqswap" \
 
 

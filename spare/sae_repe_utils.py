@@ -1,6 +1,6 @@
 import json
 import os
-import datasets
+import local_datasets
 from spare.utils import PROJ_DIR
 import torch
 import numpy as np
@@ -193,7 +193,7 @@ def load_grouped_prompts(model_name, results_save_dir_name="grouped_prompts",
 
 def load_dataset_and_memorised_set(data_name, model_name):
     if data_name == "nqswap":
-        data = datasets.load_dataset("pminervini/NQ-Swap")["dev"]
+        data = local_datasets.load_dataset("pminervini/NQ-Swap")["dev"]
         data = [_ for _ in data]
         idx2data = dict()
         for idx, item in enumerate(data):
@@ -204,7 +204,7 @@ def load_dataset_and_memorised_set(data_name, model_name):
         return data, memorised_set
 
     elif data_name == "macnoise":
-        data_full = datasets.load_dataset("GWHed/dataset_macnoise")
+        data_full = local_datasets.load_dataset("GWHed/dataset_macnoise")
         data = data_full["train_chatgpt"]
         data = data.select(range(0, 5120))
         data = [_ for _ in data]

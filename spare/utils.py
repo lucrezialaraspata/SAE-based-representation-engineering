@@ -26,6 +26,9 @@ def load_jsonl(path):
 
 
 def load_model(model_path, flash_attn, not_return_model=False):
+    n_gpus = torch.cuda.device_count()
+    max_memory = "15000MB"
+
     tokenizer = AutoTokenizer.from_pretrained(
         model_path,
         padding_side='left',
@@ -42,12 +45,15 @@ def load_model(model_path, flash_attn, not_return_model=False):
                 model_path,
                 attn_implementation=attn_implementation,
                 torch_dtype=torch.bfloat16,
+                device_map="auto",
+                #max_memory = {i: max_memory for i in range(n_gpus)},
             )
         else:
             model = LlamaForCausalLM.from_pretrained(
                 model_path,
                 attn_implementation=attn_implementation,
                 torch_dtype=torch.bfloat16,
+                max_memory = {i: max_memory for i in range(n_gpus)},
             )
         model.cuda().eval()
     return model, tokenizer
@@ -79,7 +85,7 @@ def init_frozen_language_model(model_path, attn_imp="flash_attention_2"):
 
 
 def load_frozen_sae(layer_idx, model_name):
-    if model_name == "Meta-Llama-3-8B":
+    if model_name == "Llama-3.1-8B":
         sae = Sae.load_from_hub("EleutherAI/sae-llama-3-8b-32x", hookpoint=f"layers.{layer_idx}")
     elif model_name == "Llama-2-7b-hf":
         sae = Sae.load_from_hub("yuzhaouoe/Llama2-7b-SAE", hookpoint=f"layers.{layer_idx}")

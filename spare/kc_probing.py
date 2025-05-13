@@ -147,7 +147,7 @@ def logistic_regression_eval(model, dataloader):
     return {"ACC": ACC, "AUC": AUC, "AUPRC": AUPRC}
 
 
-def main(model_path="meta-llama/Meta-Llama-3-8B",
+def main(model_path="meta-llama/Llama-3.1-8B",
          data_name="nqswap",
          analyse_activation="hidden",
          layer_idx=None,
@@ -157,15 +157,33 @@ def main(model_path="meta-llama/Meta-Llama-3-8B",
          rewrite=False,
          save_latest=True,
          ):
+    
+    print("==" * 50)
+    print(f"model_path: {model_path}")
+    print(f"data_name: {data_name}")
+    print(f"analyse_activation: {analyse_activation}")
+    print(f"layer_idx: {layer_idx}")
+    print(f"save_logs: {save_logs}")
+    print(f"k_shot: {k_shot}")
+    print(f"tag: {tag}")
+    print(f"rewrite: {rewrite}")
+    print(f"save_latest: {save_latest}")
+    print("==" * 50)
+
+
     model_name = os.path.basename(model_path)
     instance_set_compositions, _ = get_instance_compositions(data_name, model_name)
 
+    print("Loading conflict train test data...")
     train_activations, train_labels, test_activations, test_labels = load_conflict_train_test_data(
         instance_set_compositions=instance_set_compositions, model_name=model_name, tag=tag,
         data_name=data_name, analyse_activation=analyse_activation, layer_idx=layer_idx, k_shot=k_shot
     )
     assert len(train_activations) == len(train_labels)
     assert len(test_activations) == len(test_labels)
+    print("..Loaded conflict train test data...")
+    print("Starting training and evaluation process...")
+
     batch_size = 64
     input_dim = train_activations.shape[1]
     label2idx = {"none-conflict": 0, "conflict": 1}
@@ -175,6 +193,8 @@ def main(model_path="meta-llama/Meta-Llama-3-8B",
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     test_dataset = ActivationDataset(test_activations, test_labels)
 
+    print("Datasets and dataloaders created.")
+
     criterion = nn.BCELoss()
     num_epochs = 20
     base_lambda_l1 = 0.0002
@@ -183,6 +203,7 @@ def main(model_path="meta-llama/Meta-Llama-3-8B",
     if k_shot == 0:
         prob_dir = f"prob_conflict_zero_shot_act{tag}"
     for factor in [3]:
+        print(f"Processing L1 factor: {factor}")
 
         if not save_latest:
             save_dir = PROJ_DIR / "checkpoints" / model_name / data_name / prob_dir / analyse_activation
@@ -200,11 +221,13 @@ def main(model_path="meta-llama/Meta-Llama-3-8B",
 
         if not rewrite and os.path.exists(save_path) and os.path.exists(result_path):
             logger.info(f"continue, checkpoints exists: {save_path}")
+            print(f"Skipping factor {factor}, checkpoints exist.")
             continue
 
         lambda_l1 = base_lambda_l1 * factor
         all_models, all_metrics, all_best_epochs = [], [], []
         for train_time in range(train_times):
+            print(f"Training iteration: {train_time + 1}/{train_times}")
             prob_model = LogisticRegression(input_dim=input_dim, use_bias=True)
             prob_model.cuda()
             optimizer = optim.Adam(prob_model.parameters(), lr=0.002)
@@ -212,6 +235,7 @@ def main(model_path="meta-llama/Meta-Llama-3-8B",
 
             cur_train_best_score, cur_train_best_model, cur_best_epoch = -1, None, 0
             for epoch in range(num_epochs):
+                print(f"Epoch: {epoch + 1}/{num_epochs}")
                 for batch_hidden_states, batch_labels in train_dataloader:
                     prob_model.train()
                     outputs = prob_model(batch_hidden_states.cuda())
@@ -244,6 +268,7 @@ def main(model_path="meta-llama/Meta-Llama-3-8B",
             logger.info(f"{model_name} {data_name} {analyse_activation} layer{layer_idx} "
                         f"TRAIN [{train_time + 1}], ACC: {test_eval_metrics['ACC']:.3f},"
                         f" AUC: {test_eval_metrics['AUC']:.3f}, AUPRC: {test_eval_metrics['AUPRC']:.3f}")
+            print(f"Completed training iteration {train_time + 1}. Metrics: {test_eval_metrics}")
             cur_train_best_model.cpu()
             all_models.append(cur_train_best_model.state_dict())
             all_metrics.append(test_eval_metrics)
@@ -258,11 +283,13 @@ def main(model_path="meta-llama/Meta-Llama-3-8B",
         for key in metric_keys:
             logger.info(f"{key}_avg: {eval_results[key + '_avg']:.3f}, {key}_std: {eval_results[key + '_std']:.3f}")
         logger.info("")
-        print(all_best_epochs)
+        print(f"Completed processing for L1 factor {factor}. Best epochs: {all_best_epochs}")
         if save_logs:
             torch.save(all_models, save_path)
             eval_results.update({f"all_{k}": dataframe[k].tolist() for k in metric_keys})
             json.dump(eval_results, open(result_path, "w"), indent=4)
+
+    print("Training and evaluation process completed.")
 
 
 def get_records(model_path, data_name, l1_factor, k_shot, tag=""):
@@ -299,7 +326,7 @@ def get_records(model_path, data_name, l1_factor, k_shot, tag=""):
     return records
 
 
-def draw_probing_model_accuracy(model_path="meta-llama/Meta-Llama-3-8B",
+def draw_probing_model_accuracy(model_path="meta-llama/Llama-3.1-8B",
                                 data_name="nqswap",
                                 k_shot=4,
                                 l1_factor=None,
@@ -350,3 +377,9 @@ def draw_probing_model_accuracy(model_path="meta-llama/Meta-Llama-3-8B",
     plt.grid(True)
     plt.savefig(image_save_dir / f"{model_name} {data_name} AUPRC.pdf", format='pdf', bbox_inches='tight')
     plt.show()
+
+
+
+
+if __name__ == '__main__':
+    main()

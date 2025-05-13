@@ -5,13 +5,13 @@ import argparse
 
 
 def get_results(model_name, data_name):
-    if model_name == "Meta-Llama-3-8B":
+    if model_name == "Llama-3.1-8B":
         use_context_files = [
-            f"Meta-Llama-3-8B-{data_name}-13,14,15,16-0.07-2.0-grouped_activations-mutual_information-True-True-42",
-            f"Meta-Llama-3-8B-{data_name}-13,14,15,16-0.07-2.0-grouped_activations-mutual_information-True-True-43",
-            f"Meta-Llama-3-8B-{data_name}-13,14,15,16-0.07-2.0-grouped_activations-mutual_information-True-True-44",
-            f"Meta-Llama-3-8B-{data_name}-13,14,15,16-0.07-2.0-grouped_activations-mutual_information-True-True-45",
-            f"Meta-Llama-3-8B-{data_name}-13,14,15,16-0.07-2.0-grouped_activations-mutual_information-True-True-46",
+            f"Llama-3.1-8B-{data_name}-13,14,15,16-0.07-2.0-grouped_activations-mutual_information-True-True-42",
+            f"Llama-3.1-8B-{data_name}-13,14,15,16-0.07-2.0-grouped_activations-mutual_information-True-True-43",
+            f"Llama-3.1-8B-{data_name}-13,14,15,16-0.07-2.0-grouped_activations-mutual_information-True-True-44",
+            f"Llama-3.1-8B-{data_name}-13,14,15,16-0.07-2.0-grouped_activations-mutual_information-True-True-45",
+            f"Llama-3.1-8B-{data_name}-13,14,15,16-0.07-2.0-grouped_activations-mutual_information-True-True-46",
         ]
         use_parameter_files = use_context_files
     elif model_name == "Llama-2-7b-hf":

@@ -5,7 +5,7 @@ from tqdm import tqdm
 import json
 import logging
 from spare.utils import init_frozen_language_model, PROJ_DIR
-from spare.datasets.function_extraction_datasets import REODQADataset
+from spare.local_datasets.function_extraction_datasets import REODQADataset
 from spare.sae_repe_utils import unified_em, load_dataset_and_memorised_set
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"

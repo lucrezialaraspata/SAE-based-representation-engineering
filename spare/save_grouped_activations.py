@@ -1,6 +1,6 @@
 import os
 from tqdm import tqdm
-from spare.datasets.function_extraction_datasets import EncodeREODQADataset
+from spare.local_datasets.function_extraction_datasets import EncodeREODQADataset
 from spare.patch_utils import InspectOutputContext
 from spare.utils import PROJ_DIR, init_frozen_language_model
 from spare.group_prompts import load_dataset_and_memorised_set

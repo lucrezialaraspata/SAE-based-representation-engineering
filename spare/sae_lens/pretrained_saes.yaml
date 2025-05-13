@@ -11684,7 +11684,7 @@ sae_bench_pythia70m_sweep_topk_ctx128_0730:
     path: pythia70m_sweep_topk_ctx128_0730/resid_post_layer_4/trainer_9
 llama-3-8b-it-res-jh:
   repo_id: Juliushanhanhan/llama-3-8b-it-res
-  model: "meta-llama/Meta-Llama-3-8B-Instruct"
+  model: "meta-llama/Llama-3.1-8B-Instruct"
   conversion_func: null
   links:
     dashboards: https://www.neuronpedia.org/llama3-8b-it-res-jh

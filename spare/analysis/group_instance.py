@@ -139,9 +139,9 @@ def get_composition(instance_sets: InstanceSets):
 
 
 def get_nqswap_compositions(model_name):
-    if model_name == "Meta-Llama-3-8B":
-        close_book_log_name = "nqswap-llama3-8b-32shot--1examples-closebook-dedup"
-        open_book_log_name = "nqswap-llama3-8b-4shot--1examples-openbook-orgctxans"
+    if model_name == "Llama-3.1-8B":
+        close_book_log_name = "nqswap-llama3-8b-closebook" # "nqswap-llama3-8b-32shot--1examples-closebook-dedup"
+        open_book_log_name = "nqswap-llama3-8b-openbook" # "nqswap-llama3-8b-4shot--1examples-openbook-orgctxans"
     elif model_name == "Llama-2-7b-hf":
         close_book_log_name = "nqswap-llama2-7b-32shot--1examples-closebook-dedup"
         open_book_log_name = "nqswap-llama2-7b-4shot--1examples-openbook-orgctxans"
@@ -154,12 +154,15 @@ def get_nqswap_compositions(model_name):
         close_book_log_name, open_book_log_name,
         no_conflict_open_book_log_name=None
     )
+    print("\t\t\t - Grouped instances")
     instance_set_compositions = get_composition(org_ctx_ans_demonstration_instance_sets)
+    print("\t\t\t - Got composition")
+
     return instance_set_compositions
 
 
 def get_macnoise_compositions(model_name):
-    if model_name == "Meta-Llama-3-8B":
+    if model_name == "Llama-3.1-8B":
         close_book_log_name = "macnoise-chatgpt-llama3-8b-4shot-5120examples-mask0rh-macnoise_1309"
         open_book_log_name = "macnoise-chatgpt-llama3-8b-4shot-5120examples-mask0rh-macnoise_1309"
     elif model_name == "Llama-2-7b-hf":

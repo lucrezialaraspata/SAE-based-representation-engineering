@@ -1,7 +1,7 @@
 import os
 import numpy as np
 import torch
-from spare.datasets.function_extraction_datasets import REODQADataset
+from spare.local_datasets.function_extraction_datasets import REODQADataset
 from spare.spare_for_generation import load_hiddens_and_get_function_weights, \
     prepare_patch_function, generate_with_patch, load_function_activations
 import logging

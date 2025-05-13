@@ -1,5 +1,5 @@
 import numpy as np
-import datasets
+import local_datasets
 from torch.utils.data import Dataset, DataLoader
 from transformers import LlamaTokenizer
 import copy
@@ -30,7 +30,7 @@ class MACNoise(Dataset):
         if self.test_example_org_context:
             logger.info("no KC")
 
-        self.data = datasets.load_dataset("GWHed/dataset_macnoise")
+        self.data = local_datasets.load_dataset("GWHed/dataset_macnoise")
         self.data_train = [_ for _ in self.data['train']]
         self.demonstration_pool = copy.deepcopy(self.data_train)
         self.data = [_ for _ in self.data['train_chatgpt']]
