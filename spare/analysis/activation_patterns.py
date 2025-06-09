@@ -284,4 +284,4 @@ def draw_features(model_path="meta-llama/Llama-3.1-8B", data_name="nqswap"):
 
 if __name__ == '__main__':
     draw_features()
-    draw_features(model_path="meta-llama/Llama-2-7b-hf")
+    draw_features(model_path="meta-llama/Meta-Llama-3-8B")

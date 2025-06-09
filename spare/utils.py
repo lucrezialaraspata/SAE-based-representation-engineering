@@ -2,7 +2,7 @@ import os
 import json
 import torch
 import logging
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, BitsAndBytesConfig
 from pathlib import Path
 from spare.sae import Sae
 from spare.function_extraction_modellings.function_extraction_gemma2 import Gemma2ForCausalLM
@@ -26,6 +26,15 @@ def load_jsonl(path):
 
 
 def load_model(model_path, flash_attn, not_return_model=False):
+
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.bfloat16,
+    )
+
+
     n_gpus = torch.cuda.device_count()
     max_memory = "15000MB"
 
@@ -43,9 +52,11 @@ def load_model(model_path, flash_attn, not_return_model=False):
         if "gemma" in model_path.lower():
             model = Gemma2ForCausalLM.from_pretrained(
                 model_path,
+                trust_remote_code=True,
                 attn_implementation=attn_implementation,
                 torch_dtype=torch.bfloat16,
                 device_map="auto",
+                quantization_config=bnb_config,
                 #max_memory = {i: max_memory for i in range(n_gpus)},
             )
         else:

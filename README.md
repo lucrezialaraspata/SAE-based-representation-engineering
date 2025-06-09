@@ -14,6 +14,26 @@ conda activate spare
 bash ./scripts/install.sh
 ```
 
+To avoid conflicts and problem with required libraries use UV as oackage manager
+```bash
+uv venv --python 3.9
+source .venv/bin/activate
+bash ./scripts/install.sh
+```
+
+## Run Analysis
+
+First save activations witht the following command:
+
+```bash
+python -m spare.analysis.analysis_save_activations
+```
+
+Then group them with the following command:
+```bash
+python -m spare.analysis.analysis_save_activations
+```
+
 ## Run SpARE
 
 

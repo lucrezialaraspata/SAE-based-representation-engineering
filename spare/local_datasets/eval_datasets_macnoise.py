@@ -1,5 +1,5 @@
 import numpy as np
-import local_datasets
+import datasets
 from torch.utils.data import Dataset, DataLoader
 from transformers import LlamaTokenizer
 import copy

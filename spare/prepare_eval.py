@@ -11,9 +11,9 @@ import logging
 import os
 import json
 from tqdm import tqdm
+from transformers import GenerationConfig
 
-os.environ["TOKENIZERS_PARALLELISM"] = "true"
-#os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s %(name)s %(lineno)s: %(message)s",
@@ -52,7 +52,7 @@ def greedy_decoding_hf(
     assert len(input_ids) == 1
     if "eos_token_id" not in generation_kwargs:
         logger.warning("eos_token_id is not set")
-
+    
     gen_kwargs = model.generation_config.to_dict()
     gen_kwargs.update(generation_kwargs)
     gen_kwargs.pop("max_length")
@@ -103,7 +103,6 @@ def main(
 
     print(f"Loading model and tokenizer {model_path}...")
     model, tokenizer = load_model(model_path, flash_attn)
-    model.to('cuda')
     print("Model and tokenizer loaded.")
     if dataset_name == "nqswap":
         dataset = NQSwap(k_shot, seed, tokenizer, demonstrations_org_context, demonstrations_org_answer)
@@ -134,7 +133,7 @@ def main(
             gen_results = greedy_decoding_hf(
                 model,
                 tokenizer,
-                batch["with_ctx_input_ids"].cuda(),
+                batch["with_ctx_input_ids"].to(model.device),
                 generation_kwargs,
                 #flash_attn=flash_attn      viene passata al modello, quindi POTREBBE non servire
             )
@@ -148,7 +147,7 @@ def main(
         if run_close_book:
             print("Running close book decoding...")
             attention_mask = None
-            input_ids = batch["without_ctx_input_ids"].cuda()
+            input_ids = batch["without_ctx_input_ids"].to(model.device)
             gen_results = greedy_decoding_hf(
                 model,
                 tokenizer,

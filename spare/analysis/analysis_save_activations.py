@@ -22,7 +22,7 @@ logger.setLevel(level=logging.INFO)
 @torch.no_grad()
 def save_activations(
         target_layers=None,
-        model_path="meta-llama/Llama-3.1-8B",
+        model_path="meta-llama/Meta-Llama-3-8B",
         none_conflict=False,
         data_name="nqswap",
 ):
@@ -30,7 +30,7 @@ def save_activations(
     batch_size = 1
     demonstrations_org_context = True
     demonstrations_org_answer = True
-    flash_attn = True
+    flash_attn = False
 
     results_dir = PROJ_DIR / f"cache_data"
 
@@ -72,6 +72,9 @@ def save_activations(
     num_examples = 0
     tqdm_bar = tqdm(enumerate(dataloader), total=len(dataloader), disable=False)
     for bid, batch in tqdm_bar:
+        # TODO: remove
+        if num_examples >= 200:
+            break  # Exit the loop after reaching max_samples
 
         tqdm_bar.set_description(f"analysis {bid}, num_examples: {num_examples}")
         num_examples += 1
@@ -196,7 +199,7 @@ def save_distinct_questions(data_name):
     demonstrations_org_context = True
     demonstrations_org_answer = True
     from transformers import AutoTokenizer
-    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Llama-3.1-8B")
+    tokenizer = AutoTokenizer.from_pretrained("meta-llama/Meta-Llama-3-8B")
     tokenizer.pad_token = tokenizer.eos_token
     if data_name == "macnoise":
         dataset = MACNoise(4, 42, tokenizer, demonstrations_org_context, demonstrations_org_answer, 5120, False)
@@ -214,16 +217,16 @@ def save_distinct_questions(data_name):
 
 if __name__ == '__main__':
     save_activations(
-        model_path="meta-llama/Llama-3.1-8B",
-        close_book=False,
+        model_path="meta-llama/Meta-Llama-3-8B",
+        #close_book=False,
         none_conflict=False,
         data_name="nqswap",
-        target_layers=list(range(0, 14)),
+        target_layers=list(range(15, 26)),
     )
     save_activations(
-        model_path="meta-llama/Llama-3.1-8B",
-        close_book=False,
+        model_path="meta-llama/Meta-Llama-3-8B",
+        #close_book=False,
         none_conflict=True,
         data_name="nqswap",
-        target_layers=list(range(0, 14)),
+        target_layers=list(range(15, 26)),
     )

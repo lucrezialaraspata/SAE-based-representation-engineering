@@ -1,17 +1,18 @@
-pip install torch==2.2.1
-pip install flash-attn==2.5.6 --no-build-isolation
-pip install transformers
-pip install numpy==1.26.4
-pip install wandb
-pip install rwkv
-pip install simple_parsing
-pip install natsort
-pip install accelerate
-pip install datasets
-pip isntall scikit-learn
-pip install seaborn
-pip install transformer_lens
-pip install jaxtyping
-pip install scikit-learn
+uv pip install torch==2.2.1
+uv pip install flash-attn==2.5.6 --no-build-isolation
+uv pip install transformers
+uv pip install numpy==1.26.4
+uv pip install wandb
+uv pip install rwkv
+uv pip install simple_parsing
+uv pip install natsort
+uv pip install accelerate
+uv pip install datasets
+uv pip install scikit-learn
+uv pip install seaborn
+uv pip install transformer_lens
+uv pip install jaxtyping
+uv pip install scikit-learn
+uv pip install bitsandbytes
 
-pip install -e.
+uv pip install -e.

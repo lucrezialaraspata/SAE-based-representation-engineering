@@ -1,4 +1,4 @@
-Metadata-Version: 2.1
+Metadata-Version: 2.4
 Name: spare
 Version: 0.1.0
 Summary: Code for the paper "Steering Knowledge Selection Behaviours in LLMs via SAE-Based Representation Engineering"
@@ -10,6 +10,15 @@ Classifier: Operating System :: OS Independent
 Requires-Python: >=3.9
 Description-Content-Type: text/markdown
 License-File: LICENSE
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: license-file
+Dynamic: requires-python
+Dynamic: summary
 
 # Steering Knowledge Selection Behaviours in LLMs via SAE-Based Representation Engineering
 
@@ -24,6 +33,12 @@ This repository hosts the data and code of the paper: [Steering Knowledge Select
 ```bash
 conda create -n spare python=3.9 -y
 conda activate spare
+bash ./scripts/install.sh
+```
+
+```bash
+uv venv --python 3.9
+source .venv/bin/activate
 bash ./scripts/install.sh
 ```
 
