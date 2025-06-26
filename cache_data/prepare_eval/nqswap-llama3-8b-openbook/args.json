@@ -6,8 +6,8 @@
     "demonstrations_org_context": false,
     "demonstrations_org_answer": false,
     "batch_size": 1,
-    "run_open_book": false,
-    "run_close_book": true,
+    "run_open_book": true,
+    "run_close_book": false,
     "flash_attn": true,
     "write_logs": false,
     "dataset_name": "nqswap"
