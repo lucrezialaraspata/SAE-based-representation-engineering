@@ -184,7 +184,7 @@ def logistic_regression_eval(model, dataloader):
 
 def main(model_path="meta-llama/Meta-Llama-3-8B",
          data_name="nqswap",
-         analyse_activation="hidden",
+         analyse_activation="mlp",
          layer_idx=None,
          save_logs=True,
          k_shot=4,
