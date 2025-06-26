@@ -28,14 +28,14 @@ import argparse
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp_name", type=str, default="debug")
-    parser.add_argument('--model_path', type=str, default="google/gemma-2-9b")
-    parser.add_argument('--k_shot', type=int, default=1)
+    parser.add_argument('--model_path', type=str, default="meta-llama/Meta-Llama-3-8B")
+    parser.add_argument('--k_shot', type=int, default=4)
     parser.add_argument('--seed', type=int, default=42)
     parser.add_argument('--demonstrations_org_context', action="store_true")
     parser.add_argument('--demonstrations_org_answer', action="store_true")
     parser.add_argument("--batch_size", type=int, default=1)
-    parser.add_argument("--run_open_book", action="store_true", default=True)
-    parser.add_argument("--run_close_book", action="store_true", default=False)
+    parser.add_argument("--run_open_book", action="store_true", default=False)
+    parser.add_argument("--run_close_book", action="store_true", default=True)
     parser.add_argument("--flash_attn", action="store_true", default=True)
     parser.add_argument("--write_logs", action="store_true", default=False)
     parser.add_argument("--dataset_name", type=str, default="nqswap", choices=["nqswap", "macnoise"])
@@ -53,9 +53,13 @@ def greedy_decoding_hf(
     if "eos_token_id" not in generation_kwargs:
         logger.warning("eos_token_id is not set")
     
-    gen_kwargs = model.generation_config.to_dict()
-    gen_kwargs.update(generation_kwargs)
-    gen_kwargs.pop("max_length")
+    if model.generation_config is None:
+        gen_kwargs = GenerationConfig(**generation_kwargs)
+    else:
+        gen_kwargs = model.generation_config.to_dict()
+        gen_kwargs.update(generation_kwargs)
+        gen_kwargs.pop("max_length")
+
     generated_ids = model.generate(input_ids=input_ids, **gen_kwargs)
     generated_ids = generated_ids[0][len(input_ids[0]):].tolist()
     generated_str = tokenizer.decode(generated_ids)
@@ -71,14 +75,14 @@ def main(
         write_logs=False,
         flash_attn=True,
         exp_name="debug",
-        model_path="google/gemma-2-9b",
-        k_shot=1,
+        model_path="meta-llama/Meta-Llama-3-8B",
+        k_shot=4,
         seed=42,
         demonstrations_org_context=True,
         demonstrations_org_answer=True,
         batch_size=1,
-        run_open_book=True,
-        run_close_book=False,
+        run_open_book=False,
+        run_close_book=True,
         dataset_name="nqswap",
         args=None
 ):

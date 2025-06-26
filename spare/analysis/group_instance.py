@@ -102,6 +102,19 @@ def get_composition(instance_sets: InstanceSets):
     else:
         m_and_oo, m_and_onoto, notm_and_oo, notm_and_onoto = None, None, None, None
 
+    '''
+    --------------------------------------------------------
+    Acronym	Meaning
+    --------------------------------------------------------
+    M ->	Memorised set (correct in close-book)
+    notM ->	Not memorised set (incorrect in close-book)
+    Ss ->	Correct on sub-answer in open-book with sub-context
+    So ->	Correct on original answer in open-book with sub-context
+    Snotso ->	Incorrect on both sub-answer and original answer in open-book with sub-context
+    Oo ->	Correct on original answer in open-book with original context
+    Onoto ->	Incorrect on original answer in open-book with original context
+    --------------------------------------------------------
+    '''
     print(f"M: {len(instance_sets.memorised_set)}")
     print(f"notM: {len(instance_sets.not_memorised_set)}")
     print(f"Ss: {len(instance_sets.give_sub_ctx_pred_sub_ans_set)}")
@@ -139,7 +152,7 @@ def get_composition(instance_sets: InstanceSets):
 
 
 def get_nqswap_compositions(model_name):
-    if model_name == "Llama-3.1-8B":  # TODO: remove this. authors don't used a close book setting
+    if model_name == "Llama-3.1-8B":
         close_book_log_name = "nqswap-llama3-8b-closebook" # "nqswap-llama3-8b-32shot--1examples-closebook-dedup"
         open_book_log_name = "nqswap-llama3-8b-openbook" # "nqswap-llama3-8b-4shot--1examples-openbook-orgctxans"
     elif model_name == "Llama-2-7b-hf":

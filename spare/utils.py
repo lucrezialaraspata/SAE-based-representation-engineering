@@ -57,6 +57,7 @@ def load_model(model_path, flash_attn, not_return_model=False):
                 torch_dtype=torch.bfloat16,
                 device_map="auto",
                 quantization_config=bnb_config,
+                #trust_remote_code=True,
                 #max_memory = {i: max_memory for i in range(n_gpus)},
             )
         else:
@@ -64,6 +65,7 @@ def load_model(model_path, flash_attn, not_return_model=False):
                 model_path,
                 attn_implementation=attn_implementation,
                 torch_dtype=torch.bfloat16,
+                trust_remote_code=True,
                 max_memory = {i: max_memory for i in range(n_gpus)},
             )
         model.cuda().eval()

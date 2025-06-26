@@ -197,7 +197,7 @@ def get_instance_type_latex(instance_set_compositions, instance_id):
     return divide_by_sub_context_type, divide_by_org_context_type
 
 
-def draw_features(model_path="meta-llama/Llama-3.1-8B", data_name="nqswap"):
+def draw_features(model_path="meta-llama/Meta-Llama-3-8B", data_name="nqswap"):
     model_name = model_path.split("/")[-1]
 
     record_dir = PROJ_DIR / "cache_data" / model_name
@@ -284,4 +284,4 @@ def draw_features(model_path="meta-llama/Llama-3.1-8B", data_name="nqswap"):
 
 if __name__ == '__main__':
     draw_features()
-    draw_features(model_path="meta-llama/Meta-Llama-3-8B")
+    #draw_features(model_path="meta-llama/Meta-Llama-3-8B")

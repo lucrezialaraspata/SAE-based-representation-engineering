@@ -89,8 +89,8 @@ def load_conflict_train_test_data(memorised_set=None, model_name=None, data_name
     train_conflict_ids = [rng.choice(group, 1)[0] for group in conflict_group]
     train_none_conflict_ids = [rng.choice(group, 1)[0] for group in none_conflict_group]
 
-    train_conflict_ids = train_conflict_ids + train_none_conflict_ids
-    train_none_conflict_ids = train_conflict_ids
+    # train_conflict_ids = train_conflict_ids + train_none_conflict_ids
+    # train_none_conflict_ids = train_conflict_ids
 
     test_conflict_ids = []
     test_none_conflict_ids = []
@@ -99,26 +99,61 @@ def load_conflict_train_test_data(memorised_set=None, model_name=None, data_name
         test_none_conflict_ids.append(group[0])
 
     train_labels = ["conflict"] * len(train_conflict_ids) + ["none-conflict"] * len(train_none_conflict_ids)
+
+    print(f"Conflict activations shape: {conflict_activations.shape}")
+    print(f"{torch.tensor(train_conflict_ids).max()=}")
+    
+    # Filter train_conflict_ids to only include valid indices within tensor bounds
+    max_conflict_idx = conflict_activations.shape[0] - 1
+    valid_train_conflict_ids = [idx for idx in train_conflict_ids if idx <= max_conflict_idx]
+    print(f"Original train_conflict_ids: {len(train_conflict_ids)}, valid: {len(valid_train_conflict_ids)}")
+    
+    if len(valid_train_conflict_ids) == 0:
+        raise ValueError("No valid conflict IDs found within tensor bounds")
+
     train_conflict_activations = conflict_activations.index_select(
-        index=torch.tensor(train_conflict_ids), dim=0
+        index=torch.tensor(valid_train_conflict_ids), dim=0
     )
+
+    # Filter train_none_conflict_ids to only include valid indices within tensor bounds
+    max_none_conflict_idx = none_conflict_activations.shape[0] - 1
+    valid_train_none_conflict_ids = [idx for idx in train_none_conflict_ids if idx <= max_none_conflict_idx]
+    print(f"Original train_none_conflict_ids: {len(train_none_conflict_ids)}, valid: {len(valid_train_none_conflict_ids)}")
+    
+    if len(valid_train_none_conflict_ids) == 0:
+        raise ValueError("No valid none-conflict IDs found within tensor bounds")
+
     train_none_conflict_activations = none_conflict_activations.index_select(
-        index=torch.tensor(train_none_conflict_ids), dim=0
+        index=torch.tensor(valid_train_none_conflict_ids), dim=0
     )
+
+    # Update train_labels to match the valid IDs
+    train_labels = ["conflict"] * len(valid_train_conflict_ids) + ["none-conflict"] * len(valid_train_none_conflict_ids)
+
     train_activations = torch.cat([train_conflict_activations, train_none_conflict_activations]).numpy()
 
-    test_labels = ["conflict"] * len(test_conflict_ids) + ["none-conflict"] * len(test_none_conflict_ids)
+    # Apply the same filtering to test IDs
+    max_conflict_idx = conflict_activations.shape[0] - 1
+    max_none_conflict_idx = none_conflict_activations.shape[0] - 1
+    
+    valid_test_conflict_ids = [idx for idx in test_conflict_ids if idx <= max_conflict_idx]
+    valid_test_none_conflict_ids = [idx for idx in test_none_conflict_ids if idx <= max_none_conflict_idx]
+    
+    print(f"Test - conflict IDs: {len(test_conflict_ids)} -> {len(valid_test_conflict_ids)}")
+    print(f"Test - none-conflict IDs: {len(test_none_conflict_ids)} -> {len(valid_test_none_conflict_ids)}")
+
+    test_labels = ["conflict"] * len(valid_test_conflict_ids) + ["none-conflict"] * len(valid_test_none_conflict_ids)
     test_conflict_activations = conflict_activations.index_select(
-        dim=0, index=torch.tensor(test_conflict_ids)
+        dim=0, index=torch.tensor(valid_test_conflict_ids)
     )
     test_none_conflict_activations = none_conflict_activations.index_select(
-        dim=0, index=torch.tensor(test_none_conflict_ids)
+        dim=0, index=torch.tensor(valid_test_none_conflict_ids)
     )
     test_activations = torch.cat([test_conflict_activations, test_none_conflict_activations]).numpy()
 
     if return_bid:
-        return (train_activations, train_labels, train_conflict_ids, train_none_conflict_ids,
-                test_activations, test_labels, test_conflict_ids, test_none_conflict_ids)
+        return (train_activations, train_labels, valid_train_conflict_ids, valid_train_none_conflict_ids,
+                test_activations, test_labels, valid_test_conflict_ids, valid_test_none_conflict_ids)
     else:
         return train_activations, train_labels, test_activations, test_labels
 
@@ -147,7 +182,7 @@ def logistic_regression_eval(model, dataloader):
     return {"ACC": ACC, "AUC": AUC, "AUPRC": AUPRC}
 
 
-def main(model_path="meta-llama/Llama-3.1-8B",
+def main(model_path="meta-llama/Meta-Llama-3-8B",
          data_name="nqswap",
          analyse_activation="hidden",
          layer_idx=None,
@@ -174,10 +209,13 @@ def main(model_path="meta-llama/Llama-3.1-8B",
     model_name = os.path.basename(model_path)
     instance_set_compositions, _ = get_instance_compositions(data_name, model_name)
 
+    print(f"Memorized set : {len(instance_set_compositions.instance_sets.memorised_set)}")
+
     print("Loading conflict train test data...")
+    
     train_activations, train_labels, test_activations, test_labels = load_conflict_train_test_data(
-        instance_set_compositions=instance_set_compositions, model_name=model_name, tag=tag,
-        data_name=data_name, analyse_activation=analyse_activation, layer_idx=layer_idx, k_shot=k_shot
+        memorised_set=instance_set_compositions.instance_sets.memorised_set, return_bid=False,              #tag=tag,  k_shot=k_shot,
+        model_name=model_name, data_name=data_name, analyse_activation=analyse_activation, layer_idx=layer_idx
     )
     assert len(train_activations) == len(train_labels)
     assert len(test_activations) == len(test_labels)
@@ -186,11 +224,20 @@ def main(model_path="meta-llama/Llama-3.1-8B",
 
     batch_size = 64
     input_dim = train_activations.shape[1]
+    print(f"Input dimension: {input_dim}, Train Activations: {train_activations.shape}")
+
     label2idx = {"none-conflict": 0, "conflict": 1}
     train_labels = [label2idx[lb] for lb in train_labels]
     test_labels = [label2idx[lb] for lb in test_labels]
+    
+    print(f"Train Labels: {len(train_labels)}, Test Labels: {len(test_labels)}")
+
     train_dataset = ActivationDataset(train_activations, train_labels)
+    print(f"Train dataset size: {len(train_dataset)}")
+    print(f"Test dataset size: {len(test_activations)}")
+
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+
     test_dataset = ActivationDataset(test_activations, test_labels)
 
     print("Datasets and dataloaders created.")
@@ -382,4 +429,4 @@ def draw_probing_model_accuracy(model_path="meta-llama/Llama-3.1-8B",
 
 
 if __name__ == '__main__':
-    main()
+    main(layer_idx=16)
