@@ -1,3 +1,4 @@
+-e .
 accelerate==1.7.0
 aiohappyeyeballs==2.6.1
 aiohttp==3.12.11
@@ -88,7 +89,6 @@ setuptools==80.9.0
 simple-parsing==0.1.7
 six==1.17.0
 smmap==5.0.2
--e file:///home/lucrezia/SAE-based-representation-engineering
 sympy==1.14.0
 threadpoolctl==3.6.0
 tokenizers==0.21.1

@@ -8,13 +8,42 @@ from torch.utils.hooks import RemovableHandle
 from functools import partial
 import torch.nn as nn
 import traceback
+import json
 from spare.function_extraction_modellings.function_extraction_llama import LlamaForCausalLM
 from datasets import load_dataset
 
-
-
 PROJ_DIR = Path(os.environ.get("PROJ_DIR", "./"))
 MODEL_PATH = "/home/lucrezia/SAE-based-representation-engineering/checkpoints_save_latest/Meta-Llama-3-8B/nqswap/prob_conflict/hidden/prob_model_list_16_L1factor3.pt"
+LABEL = {
+    0: "no_conflict",
+    1: "conflict",
+}
+
+
+def save_generation_output(output_text, input_text, instance_id, save_dir):
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    
+    output_data = {
+        "instance_id": instance_id,
+        "input": input_text,
+        "generated_output": output_text,
+        "timestamp": str(torch.cuda.current_stream().query())
+    }
+    
+    save_path = save_dir / f"generation_{instance_id}.json"
+    with open(save_path, 'w', encoding='utf-8') as f:
+        json.dump(output_data, f, indent=2, ensure_ascii=False)
+    
+    return save_path
+
+def save_model_logits(logits, instance_id, save_dir):
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    
+    save_path = save_dir / f"logits_{instance_id}.pt"
+    torch.save(logits.cpu(), save_path)
+    return save_path
 
 
 class LogisticRegression(nn.Module):
@@ -34,13 +63,16 @@ class LogisticRegression(nn.Module):
 
 
 class InspectOutputContext:
-    def __init__(self, model, module_names, move_to_cpu=False, last_position=False):
+    def __init__(self, model, module_names, move_to_cpu=False, last_position=False, save_generation=False, save_dir=None):
         self.model = model
         self.module_names = module_names
         self.move_to_cpu = move_to_cpu
         self.last_position = last_position
+        self.save_generation = save_generation
+        self.save_dir = save_dir
         self.handles = []
         self.catcher = dict()
+        self.final_output = None
 
     def __enter__(self):
         for module_name, module in self.model.named_modules():
@@ -89,16 +121,13 @@ def inspect_hook(module: nn.Module, inputs, outputs, catcher: dict, module_name,
 
 
 def load_probing_model():
-    # First, let's examine what's in the saved file
     saved_data = torch.load(MODEL_PATH, weights_only=True)
     print(f"Type of saved data: {type(saved_data)}")
     print(f"Content: {saved_data}")
     
     model = LogisticRegression(input_dim=4096, use_bias=True)
     
-    # Handle different save formats
     if isinstance(saved_data, list):
-        # If it's a list, try to extract the state dict from the first element
         if len(saved_data) > 0:
             if hasattr(saved_data[0], 'state_dict'):
                 model.load_state_dict(saved_data[0].state_dict())
@@ -163,8 +192,9 @@ def load_model(model_path, flash_attn, not_return_model=False):
 def save_activations(
         target_layers=None,
         model_path="meta-llama/Meta-Llama-3-8B",
-        #none_conflict=False,
         data_name="demo",
+        generate_text=False,
+        max_new_tokens=50,
 ):
     flash_attn = False
     activation_type = "test"
@@ -175,7 +205,10 @@ def save_activations(
     hidden_save_dir = results_dir / model_name / data_name / "activation_hidden" / activation_type
     mlp_save_dir = results_dir / model_name / data_name / "activation_mlp" / activation_type
     attn_save_dir = results_dir / model_name / data_name / "activation_attn" / activation_type
-    for sd in [hidden_save_dir, mlp_save_dir, attn_save_dir]:
+    generation_save_dir = results_dir / model_name / data_name / "generations" / activation_type
+    logits_save_dir = results_dir / model_name / data_name / "logits" / activation_type
+    
+    for sd in [hidden_save_dir, mlp_save_dir, attn_save_dir, generation_save_dir, logits_save_dir]:
         if not os.path.exists(sd):
             os.makedirs(sd)
 
@@ -192,11 +225,6 @@ def save_activations(
 
     model, tokenizer = load_model(model_path, flash_attn=flash_attn)
 
-    # dict_messages = [
-    #     {"role": "system", "content": "You are a helpful assistant."},
-    #     {"role": "user", "content": "A company had 110 employees at the start of Q1 and 100 employees at the end of Q1. How many employees left during Q1?"},
-    # ]
-    # messages = tokenizer.apply_chat_template(dict_messages, tokenize=False)
     instance_id = 0
     messages = """Question: A company had 110 employees at the start of Q1 and 100 employees at the end of Q1. How many employees left during Q1?
     
@@ -204,8 +232,35 @@ def save_activations(
 
     tokens = tokenizer(messages, return_tensors="pt")
 
-    with InspectOutputContext(model, module_names) as inspect:
-        model(input_ids=tokens["input_ids"].to("cuda"), use_cache=False, return_dict=True)
+    with InspectOutputContext(model, module_names, save_generation=True, save_dir=generation_save_dir) as inspect:
+        if generate_text:
+            # Genera nuovo testo
+            output = model.generate(
+                input_ids=tokens["input_ids"].to("cuda"),
+                max_new_tokens=max_new_tokens,
+                do_sample=True,
+                temperature=0.7,
+                pad_token_id=tokenizer.eos_token_id,
+                return_dict_in_generate=True,
+                output_scores=True
+            )
+            
+            generated_ids = output.sequences[0][tokens["input_ids"].shape[1]:]
+            generated_text = tokenizer.decode(generated_ids, skip_special_tokens=True)
+            
+            save_generation_output(generated_text, messages, instance_id, generation_save_dir)
+            
+            if hasattr(output, 'scores') and output.scores:
+                logits = torch.stack(output.scores, dim=1)  # [batch, seq_len, vocab_size]
+                save_model_logits(logits, instance_id, logits_save_dir)
+            
+            print(f"Input: {messages}")
+            print(f"Generated: {generated_text}")
+        else:
+            model_output = model(input_ids=tokens["input_ids"].to("cuda"), use_cache=False, return_dict=True)
+            
+            last_token_logits = model_output.logits[0, -1, :]  # [vocab_size]
+            save_model_logits(last_token_logits.unsqueeze(0), instance_id, logits_save_dir)
 
     for module, ac in inspect.catcher.items():
         # ac: [batch_size, sequence_length, hidden_dim]
@@ -234,36 +289,23 @@ def combine_activations(model_name, data_name, analyse_activation=None, activati
         activation_type = [activation_type]
     results_dir = PROJ_DIR / f"cache_data"
 
-    print(f"Model name: {model_name}")
-    print(f"Data name: {data_name} (should be 'demo')")
-    print(f"Activation types: {activation_type} (should be 'test')")
-    print(f"Analyse activation: {analyse_activation} (should be 'mlp', 'attn', 'hidden')")
-    print(f"Layer IDs: {layer_ids}")
-
     for at in activation_type:  # test
         for aa in analyse_activation:   #hidden, mlp, attn
             act_dir = results_dir / model_name / data_name / f"activation_{aa}" / at
-            print(f"\nProcessing activations in {act_dir} for {model_name} {data_name} {at} {aa}")
 
             act_files = list(os.listdir(act_dir))
-            print(f"\nFound {len(act_files)} activation files in {act_dir}")
-            print(f"\t {act_files}")
 
             act_files = [f for f in act_files if len(f.split("-")) == 2]
-            print(f"\nFiltered to {len(act_files)} valid activation files")
-            print(f"\t {act_files}")
 
             act_files_layer_idx_instance_idx = [
                 [act_f, parse_layer_id_and_instance_id(os.path.basename(act_f))]
                 for act_f in act_files
             ]
-            print(f"\nExtracted layer and instance IDs from activation files: {len(act_files_layer_idx_instance_idx)}\n\t{act_files_layer_idx_instance_idx}")
 
             # For each layer id (as key), the value contains a list of [activation file, instance id]
             layer_group_files = {lid: [] for lid in layer_ids}
             for act_f, (layer_id, instance_id) in act_files_layer_idx_instance_idx:
                 layer_group_files[layer_id].append([act_f, instance_id])
-            print(f"\nGrouped activation files by layer ID: {layer_group_files}")
                         
             for layer_id in layer_ids:
                 # Sort the files for each layer by instance ID
@@ -316,16 +358,19 @@ def logistic_regression_eval(model, hidden_state):
     #output = model(hidden_state.cuda())
     output = model(hidden_state)
     predicted = (output > 0.5).float()
-    print(f"Prediction: {predicted}")
+    return predicted
 
 def main():
     print("\n" + "="*60)
     print("EXAMPLE USAGE: Knowledge Conflict Classification")
     print("="*60)
 
-    print("\n1. Save a test activation")
-    save_activations(target_layers=list(range(15, 26)))
-    
+    print("\n1. Save activations")
+    save_activations(
+        target_layers=list(range(15, 26)), 
+        generate_text=True,
+        max_new_tokens=1024
+    )
     
     print("\n2. Load probing model")
     model = load_probing_model()
@@ -334,13 +379,57 @@ def main():
     print("\n3. Load activation")
     activation = load_activations(layer_idx=16)
 
-    logistic_regression_eval(model, activation)
+    pred = logistic_regression_eval(model, activation)
+    print(f"\tPrediction: {LABEL[pred.item()]}")
     
+    print("\n4. Check generated answer")
+    check_generated_answer(
+        model_name="meta-llama/Meta-Llama-3-8B",
+        data_name="demo"
+    )
 
     print("-" * 60)
 
+def load_generation_output(model_name, data_name, activation_type="test", instance_id=0):
+    results_dir = PROJ_DIR / f"cache_data"
+    model_name = model_name.split("/")[-1]
+    generation_dir = results_dir / model_name / data_name / "generations" / activation_type
+    
+    file_path = generation_dir / f"generation_{instance_id}.json"
+    
+    if os.path.exists(file_path):
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    else:
+        print(f"File non trovato: {file_path}")
+        return None
 
+def load_model_logits(model_name, data_name, activation_type="test", instance_id=0):
+    results_dir = PROJ_DIR / f"cache_data"
+    model_name = model_name.split("/")[-1]
+    logits_dir = results_dir / model_name / data_name / "logits" / activation_type
+    
+    file_path = logits_dir / f"logits_{instance_id}.pt"
+    
+    if os.path.exists(file_path):
+        return torch.load(file_path, map_location="cuda")
+    else:
+        print(f"File non trovato: {file_path}")
+        return None
 
+def check_generated_answer(
+    model_name="meta-llama/Meta-Llama-3-8B",
+    data_name="demo",
+    activation_type="test",
+    instance_id=0
+):
+    
+    generation_data = load_generation_output(model_name, data_name, activation_type, instance_id)
+    if generation_data:
+        print(f"\nInput: \n{generation_data['input']}")
+        print(f"\nModel answer: \n{generation_data['generated_output']}")
+    
+    
 
 if __name__ == "__main__":
     main()
