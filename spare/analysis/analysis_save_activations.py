@@ -72,10 +72,6 @@ def save_activations(
     num_examples = 0
     tqdm_bar = tqdm(enumerate(dataloader), total=len(dataloader), disable=False)
     for bid, batch in tqdm_bar:
-        # TODO: remove
-        if num_examples >= 200:
-            break  # Exit the loop after reaching max_samples
-
         tqdm_bar.set_description(f"analysis {bid}, num_examples: {num_examples}")
         num_examples += 1
 
