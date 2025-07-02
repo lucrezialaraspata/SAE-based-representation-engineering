@@ -13,7 +13,7 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 from pylab import rcParams
 
-rcParams.update({'text.usetex': True, })
+rcParams.update({'text.usetex': False, })
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s %(name)s %(lineno)s: %(message)s",
@@ -260,7 +260,7 @@ def draw_features(model_path="meta-llama/Meta-Llama-3-8B", data_name="nqswap"):
     rcParams['legend.title_fontsize'] = 16
     rcParams.update({
         'font.family': 'serif',
-        'text.usetex': True,
+        'text.usetex': False,
         'mathtext.default': 'regular',
         'font.weight': 'bold',
     })
@@ -283,5 +283,11 @@ def draw_features(model_path="meta-llama/Meta-Llama-3-8B", data_name="nqswap"):
 
 
 if __name__ == '__main__':
+    activation_analysis(
+        target_layers=list(range(15, 26)),
+        model_path="meta-llama/Meta-Llama-3-8B",
+        none_conflict=False,
+        data_name="nqswap",
+    )
     draw_features()
-    #draw_features(model_path="meta-llama/Meta-Llama-3-8B")
+    
