@@ -1,8 +1,11 @@
 from spare.analysis.analysis_save_activations import save_activations
 
+
 MODEL_NAME = "meta-llama/Meta-Llama-3-8B"
 DATASET = "nqswap"
 LAYERS = list(range(10, 25))
+USE_LOCAL = True
+
 
 def main():
     print("--"*50)
@@ -20,6 +23,7 @@ def main():
         none_conflict=False,
         data_name=DATASET,
         target_layers=LAYERS,
+        use_local=USE_LOCAL,
     )
 
     print("\n2. None-Conflict instances")
@@ -28,8 +32,10 @@ def main():
         none_conflict=True,
         data_name=DATASET,
         target_layers=LAYERS,
+        use_local=USE_LOCAL,
     )
     print("--"*50)
+
 
 if __name__ == "__main__":
     main()

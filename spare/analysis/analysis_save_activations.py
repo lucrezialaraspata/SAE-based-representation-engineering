@@ -25,6 +25,7 @@ def save_activations(
         model_path="meta-llama/Meta-Llama-3-8B",
         none_conflict=False,
         data_name="nqswap",
+        use_local=False,
 ):
     seed = 42
     batch_size = 1
@@ -58,11 +59,11 @@ def save_activations(
     module_names += [f'model.layers.{idx}.self_attn' for idx in target_layers]
     module_names += [f'model.layers.{idx}.mlp' for idx in target_layers]
 
-    model, tokenizer = load_model(model_path, flash_attn=flash_attn)
+    model, tokenizer = load_model(model_path, flash_attn=flash_attn, use_local=use_local)
 
     if data_name == "nqswap":
         dataset = NQSwap(4, seed, tokenizer, demonstrations_org_context,
-                         demonstrations_org_answer, -1, none_conflict)
+                         demonstrations_org_answer, -1, none_conflict, use_local=use_local)
     elif data_name == "macnoise":
         dataset = MACNoise(4, seed, tokenizer, demonstrations_org_context, demonstrations_org_answer,
                            5120, test_example_org_context=none_conflict)
@@ -200,7 +201,7 @@ def save_distinct_questions(data_name):
     if data_name == "macnoise":
         dataset = MACNoise(4, 42, tokenizer, demonstrations_org_context, demonstrations_org_answer, 5120, False)
     else:
-        dataset = NQSwap(4, 42, tokenizer, demonstrations_org_context, demonstrations_org_answer, None, False)
+        dataset = NQSwap(4, 42, tokenizer, demonstrations_org_context, demonstrations_org_answer, None, False) # TODO: fix for kc_probing ->, use_local=use_local)
     dataloader = dataset.get_dataloader(1)
     from collections import defaultdict
     questions = defaultdict(list)
