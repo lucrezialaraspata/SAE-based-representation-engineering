@@ -177,3 +177,9 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 spare/sae/__pycache__/
+
+images/
+results_save_latest/
+checkpoints_save_latest/
+cache_data/Meta-Llama-3-8B/nqswap/
+
