@@ -4,6 +4,7 @@ from torch.utils.data import Dataset, DataLoader
 from transformers import LlamaTokenizer
 import copy
 import logging
+from spare.utils import get_weight_dir
 
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s %(name)s %(lineno)s: %(message)s",
@@ -16,7 +17,7 @@ logger.setLevel(level=logging.INFO)
 class NQSwap(Dataset):
 
     def __init__(self, k_shot: int, seed: int, tokenizer: LlamaTokenizer, demonstrations_org_context,
-                 demonstrations_org_answer, num_examples=None, test_example_org_context=False):
+                 demonstrations_org_answer, num_examples=None, test_example_org_context=False, use_local=False):
         super(NQSwap, self).__init__()
         self.k_shot = k_shot
         self.seed = seed
@@ -29,15 +30,21 @@ class NQSwap(Dataset):
         if self.test_example_org_context:
             logger.info("no KC")
 
-        self.data = datasets.load_dataset("pminervini/NQ-Swap")["dev"]
+        if not use_local:
+            self.data = datasets.load_dataset("pminervini/NQ-Swap")["dev"]
+        else:
+            local_model_path = get_weight_dir("pminervini/NQ-Swap", repo_type="datasets")
+            self.data = datasets.load_dataset("parquet", data_dir=local_model_path)["validation"]
+            print(self.data)
+        
         self.data = [_ for _ in self.data]
         self.demonstration_pool = copy.deepcopy(self.data[-256:])
         self.rng = np.random.RandomState(self.seed)
         self.rng.shuffle(self.demonstration_pool)
         self.demonstrations = self.demonstration_pool[:self.k_shot]
 
-        if num_examples is not None:
-            self.data = self.data[:num_examples]
+        # if num_examples is not None:
+        #     self.data = self.data[:num_examples]
         self.with_ctx_prompt, self.without_ctx_prompt = self.verbalise_demonstrations()
 
     def verbalise_one_example(self, example, ctx_key, ans_key, is_test=False):

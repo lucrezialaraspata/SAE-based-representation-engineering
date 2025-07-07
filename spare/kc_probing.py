@@ -347,33 +347,36 @@ def get_records(model_path, data_name, l1_factor, k_shot, tag=""):
         layer_num = 32
     records = []
     for analyse_activation in ["hidden", "mlp", "attn"]:
-        results_dir = PROJ_DIR / "results" / model_name / data_name
+        #results_dir = PROJ_DIR / "results" / model_name / data_name
         latest_results_dir = PROJ_DIR / "results_save_latest" / model_name / data_name
+        
         if k_shot == 0:
-            result_dir = results_dir / f"prob_conflict_zero_shot_act{tag}" / analyse_activation
+            #result_dir = results_dir / f"prob_conflict_zero_shot_act{tag}" / analyse_activation
             latest_results_dir = latest_results_dir / f"prob_conflict_zero_shot_act{tag}" / analyse_activation
         else:
-            result_dir = results_dir / f"prob_conflict{tag}" / analyse_activation
+            #result_dir = results_dir / f"prob_conflict{tag}" / analyse_activation
             latest_results_dir = latest_results_dir / f"prob_conflict{tag}" / analyse_activation
+        
         for layer_idx in range(layer_num):
-            logs_path = result_dir / f"layer{layer_idx}_acc_auc_L1factor{l1_factor}.json"
-            logs = json.load(open(logs_path, "r"))
+            #logs_path = latest_results_dir / f"layer{layer_idx}_acc_auc_L1factor{l1_factor}.json"
+            #logs = json.load(open(logs_path, "r"))
 
-            latest_logs_path = latest_results_dir / f"layer{layer_idx}_acc_auc_L1factor{l1_factor}.json adfadsfa"
+            latest_logs_path = latest_results_dir / f"layer{layer_idx}_acc_auc_L1factor{l1_factor}.json"
             if os.path.exists(latest_logs_path):
                 latest_logs = json.load(open(latest_logs_path, "r"))
-                for idx in range(len(logs["all_ACC"])):
+
+                for idx in range(len(latest_logs["all_ACC"])):
                     cur_acc = latest_logs["all_ACC"][idx]
                     records.append({"activation": analyse_activation, "layer": layer_idx, "acc": cur_acc,
-                                    "auc": logs["all_AUC"][idx], "auprc": logs["all_AUPRC"][idx], })
-            else:
-                for idx in range(len(logs["all_ACC"])):
-                    records.append({"activation": analyse_activation, "layer": layer_idx, "acc": logs["all_ACC"][idx],
-                                    "auc": logs["all_AUC"][idx], "auprc": logs["all_AUPRC"][idx], })
+                                    "auc": latest_logs["all_AUC"][idx], "auprc": latest_logs["all_AUPRC"][idx], })
+            # else:
+            #     for idx in range(len(logs["all_ACC"])):
+            #         records.append({"activation": analyse_activation, "layer": layer_idx, "acc": logs["all_ACC"][idx],
+            #                         "auc": logs["all_AUC"][idx], "auprc": logs["all_AUPRC"][idx], })
     return records
 
 
-def draw_probing_model_accuracy(model_path="meta-llama/Llama-3.1-8B",
+def draw_probing_model_accuracy(model_path="meta-llama/Meta-Llama-3-8B",
                                 data_name="nqswap",
                                 k_shot=4,
                                 l1_factor=None,
@@ -381,7 +384,9 @@ def draw_probing_model_accuracy(model_path="meta-llama/Llama-3.1-8B",
     model_name = os.path.basename(model_path)
 
     records = get_records(model_path, data_name, l1_factor, k_shot, tag)
+    print(f"Total records: {len(records)}")
     records = pd.DataFrame.from_records(records)
+    print(records.head())
     palette = {"hidden": "red", "mlp": "blue", "attn": "green"}
 
     image_save_dir = PROJ_DIR / "images" / "KC-detection-probing"
@@ -394,39 +399,38 @@ def draw_probing_model_accuracy(model_path="meta-llama/Llama-3.1-8B",
     rcParams['legend.title_fontsize'] = 20
     rcParams.update({
         'font.family': 'serif',
-        'text.usetex': True,
+        'text.usetex': False,
         'mathtext.default': 'regular',
         'font.weight': 'bold',
     })
 
-    plt.plot(figsize=(5, 4), dpi=150)
+    plt.figure(figsize=(20, 12), dpi=150)
     sns.lineplot(data=records, x="layer", y="acc", hue="activation", palette=palette)
     # plt.title(f"Probing model for conflict classification. Accuracy\n{model_name} {data_name}")
-    plt.ylabel(r"\textbf{Accuracy}")
-    plt.xlabel(r"\textbf{Layer}")
+    plt.ylabel("Accuracy")
+    plt.xlabel("Layer")
     plt.grid(True)
     plt.savefig(image_save_dir / f"{model_name} {data_name} Accuracy.pdf", format='pdf', bbox_inches='tight')
     plt.show()
 
-    plt.plot(figsize=(5, 4), dpi=150)
+    plt.figure(figsize=(20, 12), dpi=150)
     sns.lineplot(data=records, x="layer", y="auc", hue="activation", palette=palette)
-    plt.ylabel(r"\textbf{AUROC}")
-    plt.xlabel(r"\textbf{Layer}")
+    plt.ylabel("AUROC")
+    plt.xlabel("Layer")
     plt.grid(True)
     plt.legend(loc="lower right", title="activation")
     plt.savefig(image_save_dir / f"{model_name} {data_name} AUROC.pdf", format='pdf', bbox_inches='tight')
     plt.show()
 
-    plt.plot(figsize=(5, 4), dpi=150)
+    plt.figure(figsize=(20, 12), dpi=150)
     sns.lineplot(data=records, x="layer", y="auprc", hue="activation", palette=palette)
-    plt.ylabel(r"\textbf{AUPRC}")
-    plt.xlabel(r"\textbf{Layer}")
+    plt.ylabel("AUPRC")
+    plt.xlabel("Layer")
     plt.grid(True)
     plt.savefig(image_save_dir / f"{model_name} {data_name} AUPRC.pdf", format='pdf', bbox_inches='tight')
     plt.show()
 
 
-
-
 if __name__ == '__main__':
     main(layer_idx=16)
+    draw_probing_model_accuracy(l1_factor=3)

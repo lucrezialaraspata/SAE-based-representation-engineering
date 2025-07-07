@@ -13,7 +13,7 @@ import seaborn as sns
 from matplotlib import pyplot as plt
 from pylab import rcParams
 
-rcParams.update({'text.usetex': True, })
+rcParams.update({'text.usetex': False, })
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s %(name)s %(lineno)s: %(message)s",
@@ -84,10 +84,11 @@ def activation_analysis(
         model_path="meta-llama/Llama-3.1-8B",
         none_conflict=False,
         data_name="nqswap",
+        use_local=False,
 ):
     demonstrations_org_context = True
     demonstrations_org_answer = True
-    flash_attn = True
+    flash_attn = False
 
     model_name = model_path.split("/")[-1]
     save_dir = PROJ_DIR / "cache_data" / model_name
@@ -122,16 +123,16 @@ def activation_analysis(
     module_names += [f'model.layers.{idx}.self_attn' for idx in target_layers]
     module_names += [f'model.layers.{idx}.mlp' for idx in target_layers]
 
-    model, tokenizer = load_model(model_path, flash_attn=flash_attn)
+    model, tokenizer = load_model(model_path, flash_attn=flash_attn, use_local=use_local)
 
     layernorm_modules = [model.model.layers[idx].input_layernorm for idx in range(1, 32)]
     layernorm_modules.append(model.model.norm)
 
     if data_name == "nqswap":
         if none_conflict:
-            dataset = NQSwap(4, 42, tokenizer, demonstrations_org_context, demonstrations_org_answer, -1, True)
+            dataset = NQSwap(4, 42, tokenizer, demonstrations_org_context, demonstrations_org_answer, -1, True, use_local=use_local)
         else:
-            dataset = NQSwap(4, 42, tokenizer, demonstrations_org_context, demonstrations_org_answer, -1, False)
+            dataset = NQSwap(4, 42, tokenizer, demonstrations_org_context, demonstrations_org_answer, -1, False, use_local=use_local)
     elif data_name == "macnoise":
         dataset = MACNoise(4, 42, tokenizer, demonstrations_org_context, demonstrations_org_answer, 5120)
 
@@ -260,7 +261,7 @@ def draw_features(model_path="meta-llama/Meta-Llama-3-8B", data_name="nqswap"):
     rcParams['legend.title_fontsize'] = 16
     rcParams.update({
         'font.family': 'serif',
-        'text.usetex': True,
+        'text.usetex': False,
         'mathtext.default': 'regular',
         'font.weight': 'bold',
     })
@@ -283,5 +284,11 @@ def draw_features(model_path="meta-llama/Meta-Llama-3-8B", data_name="nqswap"):
 
 
 if __name__ == '__main__':
+    activation_analysis(
+        target_layers=list(range(15, 26)),
+        model_path="meta-llama/Meta-Llama-3-8B",
+        none_conflict=False,
+        data_name="nqswap",
+    )
     draw_features()
-    #draw_features(model_path="meta-llama/Meta-Llama-3-8B")
+    

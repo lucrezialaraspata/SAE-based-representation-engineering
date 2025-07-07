@@ -84,6 +84,7 @@ def main(
         run_open_book=False,
         run_close_book=True,
         dataset_name="nqswap",
+        use_local=False,
         args=None
 ):
     if run_open_book:
@@ -106,10 +107,11 @@ def main(
         print(f"Arguments: {json.dumps(vars(args), indent=4)}")
 
     print(f"Loading model and tokenizer {model_path}...")
-    model, tokenizer = load_model(model_path, flash_attn)
+    model, tokenizer = load_model(model_path, flash_attn, use_local=use_local)
+
     print("Model and tokenizer loaded.")
     if dataset_name == "nqswap":
-        dataset = NQSwap(k_shot, seed, tokenizer, demonstrations_org_context, demonstrations_org_answer)
+        dataset = NQSwap(k_shot, seed, tokenizer, demonstrations_org_context, demonstrations_org_answer, use_local=use_local)
     elif dataset_name == "macnoise":
         dataset = MACNoise(k_shot, seed, tokenizer, demonstrations_org_context, demonstrations_org_answer, 5120)
     else:
