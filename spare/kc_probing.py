@@ -404,7 +404,7 @@ def draw_probing_model_accuracy(model_path="meta-llama/Meta-Llama-3-8B",
         'font.weight': 'bold',
     })
 
-    plt.plot(figsize=(20, 20), dpi=150)
+    plt.figure(figsize=(20, 12), dpi=150)
     sns.lineplot(data=records, x="layer", y="acc", hue="activation", palette=palette)
     # plt.title(f"Probing model for conflict classification. Accuracy\n{model_name} {data_name}")
     plt.ylabel("Accuracy")
@@ -413,7 +413,7 @@ def draw_probing_model_accuracy(model_path="meta-llama/Meta-Llama-3-8B",
     plt.savefig(image_save_dir / f"{model_name} {data_name} Accuracy.pdf", format='pdf', bbox_inches='tight')
     plt.show()
 
-    plt.plot(figsize=(20, 20), dpi=150)
+    plt.figure(figsize=(20, 12), dpi=150)
     sns.lineplot(data=records, x="layer", y="auc", hue="activation", palette=palette)
     plt.ylabel("AUROC")
     plt.xlabel("Layer")
@@ -422,7 +422,7 @@ def draw_probing_model_accuracy(model_path="meta-llama/Meta-Llama-3-8B",
     plt.savefig(image_save_dir / f"{model_name} {data_name} AUROC.pdf", format='pdf', bbox_inches='tight')
     plt.show()
 
-    plt.plot(figsize=(20, 20), dpi=150)
+    plt.figure(figsize=(20, 12), dpi=150)
     sns.lineplot(data=records, x="layer", y="auprc", hue="activation", palette=palette)
     plt.ylabel("AUPRC")
     plt.xlabel("Layer")

@@ -23,10 +23,10 @@ def main():
         print(f"\n - Activation{act_type}")
         for layer_idx in tqdm(LAYERS, desc="\t\tTraining Layers"):
             train(
-                model_name=MODEL_NAME,
-                dataset_name=DATASET,
+                model_path=MODEL_NAME,
+                data_name=DATASET,
                 layer_idx=layer_idx,
-                activation_type=act_type,
+                analyse_activation=act_type,
             )
     
     print("--"*50)
