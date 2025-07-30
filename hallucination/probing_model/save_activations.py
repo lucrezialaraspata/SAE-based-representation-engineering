@@ -3,7 +3,7 @@ from spare.analysis.analysis_save_activations import save_activations
 
 MODEL_NAME = "meta-llama/Meta-Llama-3-8B"
 DATASET = "nqswap"
-LAYERS = list(range(10, 25))
+LAYERS = list(range(32))
 USE_LOCAL = True
 
 

@@ -3,7 +3,7 @@ from spare.analysis.activation_patterns import activation_analysis, draw_feature
 
 MODEL_NAME = "meta-llama/Meta-Llama-3-8B"
 DATASET = "nqswap"
-LAYERS = list(range(10, 25))
+LAYERS = list(range(32))
 USE_LOCAL = True
 
 
