@@ -11,7 +11,7 @@ from spare.sae_lens.eleuther_sae_wrapper import EleutherSae
 from typing import Union, Any
 
 
-PROJ_DIR = Path(os.environ.get("PROJ_DIR", "./"))
+PROJ_DIR = Path(os.getcwd())
 HF_DEFAULT_HOME = os.environ.get("HF_HOME", "~/.cache/huggingface/hub")
 
 
@@ -120,17 +120,33 @@ def load_model(model_path, flash_attn, not_return_model=False, use_local=False):
                     trust_remote_code=True,
                     max_memory = {i: max_memory for i in range(n_gpus)},
                 )
+        model.to('cuda')
         model.cuda().eval()
+        
+        for pn, p in model.named_parameters():
+            p.requires_grad = False
+            
     return model, tokenizer
 
 
+def create_bnb_config():
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True,
+        bnb_4bit_use_double_quant=True,
+        bnb_4bit_quant_type="nf4",
+        bnb_4bit_compute_dtype=torch.bfloat16,
+    )
+
+    return bnb_config
+
 def init_frozen_language_model(model_path, attn_imp="flash_attention_2"):
     bf16 = torch.bfloat16
+    bnb_config = create_bnb_config()
     
     if "llama" in model_path.lower():
-        model = LlamaForCausalLM.from_pretrained(model_path, attn_implementation=attn_imp, torch_dtype=bf16)
+        model = LlamaForCausalLM.from_pretrained(model_path, attn_implementation=attn_imp, torch_dtype=bf16, quantization_config=bnb_config)
     elif "gemma" in model_path:
-        model = Gemma2ForCausalLM.from_pretrained(model_path, attn_implementation=attn_imp, torch_dtype=bf16)
+        model = Gemma2ForCausalLM.from_pretrained(model_path, attn_implementation=attn_imp, torch_dtype=bf16, quantization_config=bnb_config)
     else:
         raise NotImplementedError
     

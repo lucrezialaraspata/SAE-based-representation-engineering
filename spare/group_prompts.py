@@ -4,7 +4,7 @@ import os
 from tqdm import tqdm
 import json
 import logging
-from spare.utils import init_frozen_language_model, PROJ_DIR
+from spare.utils import load_model, PROJ_DIR
 from spare.local_datasets.function_extraction_datasets import REODQADataset
 from spare.sae_repe_utils import unified_em, load_dataset_and_memorised_set
 
@@ -23,14 +23,15 @@ def get_args():
     parser.add_argument("--save_dir_name", type=str, required=True)
     parser.add_argument("--seeds_to_encode", type=int, nargs='+', required=True)
     parser.add_argument("--k_shot", type=int, required=True)
+    parser.add_argument("--use_local", action="store_true")
     return parser.parse_args()
 
 
 @torch.inference_mode()
-def group_prompts_based_on_behaviours(seeds_to_encode, model_path, k_shot, save_dir_name):
+def group_prompts_based_on_behaviours(seeds_to_encode, model_path, k_shot, save_dir_name, use_local=False):
     model_name = os.path.basename(model_path)
     data, memorised_set = load_dataset_and_memorised_set("nqswap", model_name)
-    model, tokenizer = init_frozen_language_model(model_path)
+    model, tokenizer = load_model(model_path, True)
     line_break_id = tokenizer.encode("\n\n", add_special_tokens=False)[-1]
     generation_kwargs = {"max_new_tokens": 12, "do_sample": False, "eos_token_id": line_break_id,
                          "pad_token_id": line_break_id, "use_cache": True, "temperature": None, "top_p": None}
@@ -128,6 +129,7 @@ def main():
         model_path=args.model_path,
         k_shot=args.k_shot,
         save_dir_name=args.save_dir_name,
+        use_local=args.use_local
     )
 
 

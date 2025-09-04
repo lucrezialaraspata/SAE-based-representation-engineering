@@ -52,7 +52,6 @@ class ReplaceOutputContext:
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.replace_handle.remove()
-        # self.inspect_handle.remove()
         if exc_type is not None:
             print("An exception occurred:")
             print(f"Type: {exc_type}")

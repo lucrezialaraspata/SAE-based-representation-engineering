@@ -48,6 +48,7 @@ def mutual_information_correlation(
 ):
     logger.info(f"Start MI: {model_name} {data_name} {load_hiddens_name} layer={layer_idx}")
     hiddens = load_grouped_hiddens(model_name, load_hiddens_name, layer_idx)
+    
     if mutual_information_num_train_examples is not None:
         logger.info(f"sample {mutual_information_num_train_examples} examples to calculate MI")
         hiddens = sample_train_data(label0_hiddens=hiddens["label0_hiddens"], label1_hiddens=hiddens["label1_hiddens"],

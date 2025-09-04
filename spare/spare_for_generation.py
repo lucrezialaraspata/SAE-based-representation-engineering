@@ -27,6 +27,7 @@ logger.setLevel(level=logging.INFO)
 
 def load_hiddens_and_get_function_weights(model_name, layer_idx, sae, hiddens_name):
     cache_weight_dir = PROJ_DIR / "cache_data" / model_name / "func_weights" / hiddens_name / f"layer{layer_idx}"
+
     if os.path.exists(cache_weight_dir):
         use_context_weight = torch.load(cache_weight_dir / "use_context_weight.pt").cuda()
         use_parameter_weight = torch.load(cache_weight_dir / "use_parameter_weight.pt").cuda()
@@ -43,26 +44,34 @@ def load_hiddens_and_get_function_weights(model_name, layer_idx, sae, hiddens_na
 
     assert len(pred_sub_answer_data) == len(label1_sae_activations)
     assert len(pred_org_answer_data) == len(label0_sae_activations)
+
     pred_sub_answer_weight = []
     for item in pred_sub_answer_data:
         pred_sub_answer_weight.append(item["so_loss"] / (item["ss_loss"] + item["so_loss"]))
+
     pred_org_answer_weight = []
     for item in pred_org_answer_data:
         pred_org_answer_weight.append(item["ss_loss"] / (item["ss_loss"] + item["so_loss"]))
+
     pred_sub_answer_weight = torch.tensor(pred_sub_answer_weight, device="cuda")
     pred_org_answer_weight = torch.tensor(pred_org_answer_weight, device="cuda")
+
     pred_sub_answer_weight = pred_sub_answer_weight / pred_sub_answer_weight.sum()
     pred_org_answer_weight = pred_org_answer_weight / pred_org_answer_weight.sum()
+
     use_context_weight = (label1_sae_activations * pred_sub_answer_weight.unsqueeze(1)).sum(dim=0)
     use_parameter_weight = (label0_sae_activations * pred_org_answer_weight.unsqueeze(1)).sum(dim=0)
+
     del label0_sae_activations
     del label1_sae_activations
     del hiddens["label0_hiddens"]
     del hiddens["label1_hiddens"]
     torch.cuda.empty_cache()
+
     os.makedirs(cache_weight_dir)
     torch.save(use_context_weight.cpu(), cache_weight_dir / "use_context_weight.pt")
     torch.save(use_parameter_weight.cpu(), cache_weight_dir / "use_parameter_weight.pt")
+
     return use_context_weight.cuda(), use_parameter_weight.cuda()
 
 
@@ -103,12 +112,13 @@ def select_functional_activations(mutual_information, expectation, select_topk_p
     return use_context_activations_indices, use_parameter_activations_indices
 
 
-def load_function_activations(layer_idx, model_name, edit_degree, hiddens_name,
-                              mutual_information_save_name, select_topk_proportion):
+def load_function_activations(layer_idx, model_name, edit_degree, hiddens_name, mutual_information_save_name, select_topk_proportion):
     sae = load_frozen_sae(layer_idx, model_name)
+
     use_context_weight, use_parameter_weight = load_hiddens_and_get_function_weights(
         model_name, layer_idx, sae, hiddens_name,
     )
+    
     mutual_information_dir = PROJ_DIR / "cache_data" / model_name / mutual_information_save_name
     mutual_information_path = mutual_information_dir / f"layer-{layer_idx} mi_expectation.pt"
     logger.info(f"load from mutual information and expectation from {mutual_information_path}")
@@ -128,23 +138,27 @@ def load_function_activations(layer_idx, model_name, edit_degree, hiddens_name,
 
 def create_funcs(num_latents, use_context_indices, use_context_weight,
                  use_parameter_indices, use_parameter_weight, edit_degree):
-    use_context_func = FunctionExtractor(num_latents)
+
     if len(use_context_indices) == 0:
         use_context_activations = torch.zeros_like(use_context_weight)
     else:
         selected_use_context_weight = use_context_weight[use_context_indices] * edit_degree
         use_context_activations = torch.zeros_like(use_context_weight)
         use_context_activations.scatter_(0, use_context_indices, selected_use_context_weight)
+
+    use_context_func = FunctionExtractor(num_latents)
     use_context_func.load_weight(use_context_activations)
 
-    use_parameter_func = FunctionExtractor(num_latents)
     if len(use_parameter_indices) == 0:
         use_parameter_activations = torch.zeros_like(use_parameter_weight)
     else:
         selected_use_parameter_weight = use_parameter_weight[use_parameter_indices] * edit_degree
         use_parameter_activations = torch.zeros_like(use_parameter_weight)
         use_parameter_activations.scatter_(0, use_parameter_indices, selected_use_parameter_weight)
+    
+    use_parameter_func = FunctionExtractor(num_latents)
     use_parameter_func.load_weight(use_parameter_activations)
+    
     return use_context_func, use_parameter_func
 
 
@@ -180,6 +194,7 @@ def patch_func_signal(activations: torch.Tensor,
     remove_func_vec = remove_func(top_indices=remove_func_top_common_acts, sae=sae, max_to_remove=acts,
                                   sae_type=sae_type)
     activations = activations - remove_func_vec
+
     add_func_vec = add_func(top_indices=add_func_top_common_acts, sae=sae, max_to_add=acts,
                             sae_type=sae_type)
     activations = activations + add_func_vec
@@ -191,45 +206,58 @@ def generate_with_patch(model, tokenizer, patch_func, inspect_module, input_ids,
     use_cache = generation_kwargs["use_cache"]
     max_new_tokens = generation_kwargs["max_new_tokens"]
     eos_token_id = generation_kwargs["eos_token_id"]
+
     if use_cache:
         with PatchOutputContext(model, inspect_module, patch_func, input_ids.shape[1] - 1):
             outputs = model(input_ids=input_ids.cuda(), use_cache=True)
+
         past_key_values = outputs.past_key_values
         _, new_token = outputs.logits[:, -1:, :].max(dim=2)
         input_ids = new_token
         generated_ids = [input_ids.item()]
+
         while True:
             outputs = model(input_ids, past_key_values=past_key_values, use_cache=True, output_attentions=True)
             past_key_values = outputs.past_key_values
             _, new_token = outputs.logits[:, -1:, :].max(dim=2)
             input_ids = new_token
             generated_ids.append(new_token.item())
+
             if len(generated_ids) == max_new_tokens or generated_ids[-1] == eos_token_id:
                 break
+
         response = tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
+
         return response
     else:
         generated_ids = []
         input_ids = input_ids.cuda()
         patch_position = input_ids.shape[1] - 1  # edit last position's hidden states
+
         for step_idx in range(max_new_tokens):
             with PatchOutputContext(model, inspect_module, patch_func, patch_position):
                 outputs = model(input_ids=input_ids, use_cache=False)
+
             _, new_token = outputs.logits[:, -1:, :].max(dim=2)
             generated_ids.append(new_token.item())
             input_ids = torch.cat([input_ids, new_token], dim=1)
+
             if len(generated_ids) == max_new_tokens or generated_ids[-1] == eos_token_id:
                 break
+
         response = tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
+
         return response
 
 
 @torch.inference_mode()
 def patch_evaluate(model, test_dataloader, tokenizer, inspect_module, use_context_patch, use_parameter_patch,
                    data_name, use_cache, run_use_parameter=True, run_use_context=True, ):
+    
     line_break_id = tokenizer.encode("\n\n", add_special_tokens=False)[-1]
     generation_kwargs = {"max_new_tokens": 12, "do_sample": False, "eos_token_id": line_break_id,
                          "pad_token_id": line_break_id, "use_cache": use_cache}
+    
     results = {"ids": [],
                "use_context_sub_scores": [],
                "use_context_org_scores": [],
@@ -237,7 +265,9 @@ def patch_evaluate(model, test_dataloader, tokenizer, inspect_module, use_contex
                "use_parameter_org_scores": [],
                "use_context_predictions": [],
                "use_parameter_predictions": []}
+    
     tqdm_bar = tqdm(test_dataloader)
+
     for batch in tqdm_bar:
         sub_answer = batch["sub_answers"][0]
         org_answer = batch["org_answers"][0]
@@ -247,12 +277,15 @@ def patch_evaluate(model, test_dataloader, tokenizer, inspect_module, use_contex
         if run_use_context:
             use_context_pred = generate_with_patch(model, tokenizer, use_context_patch, inspect_module,
                                                    batch["input_ids"], generation_kwargs)
+            
             use_context_sub_answer_em, use_context_org_answer_em = unified_em(
                 use_context_pred, org_answer, sub_answer, sub_context, data_name
             )
+
             results["use_context_sub_scores"].append(use_context_sub_answer_em)
             results["use_context_org_scores"].append(use_context_org_answer_em)
             results["use_context_predictions"].append(use_context_pred)
+        
         if run_use_parameter:
             use_parameter_pred = generate_with_patch(model, tokenizer, use_parameter_patch, inspect_module,
                                                      batch["input_ids"], generation_kwargs)
@@ -318,6 +351,7 @@ def run_sae_patching_evaluate(
         mutual_information_dir = PROJ_DIR / "cache_data" / model_name / mutual_information_save_name
         mutual_information_path = mutual_information_dir / f"layer-{layer_idx} mi_expectation.pt"
         logger.info(f"load from mutual information and expectation from {mutual_information_path}")
+
         mi_expectation = torch.load(mutual_information_path)
         all_layers_mutual_information.append(mi_expectation["mi_scores"])
         all_layers_expectation.append(mi_expectation["expectation"])
@@ -357,6 +391,7 @@ def run_sae_patching_evaluate(
         demonstration_pool_size=128,
         task="initial_ICL_with_intervention"
     )
+
     if debug_num_examples is not None:
         re_odqa_dataset.data_for_iter = re_odqa_dataset.data_for_iter[:debug_num_examples]
 
