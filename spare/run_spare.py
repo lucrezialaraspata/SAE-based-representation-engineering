@@ -26,6 +26,7 @@ def get_args():
     parser.add_argument("--mutual_information_save_name", type=str, required=True)
     parser.add_argument("--run_use_parameter", action="store_true")
     parser.add_argument("--run_use_context", action="store_true")
+    parser.add_argument("--use_local", action="store_true")
     return parser.parse_args()
 
 
@@ -56,6 +57,7 @@ def main():
         select_topk_proportion=args.select_topk_proportion,
         run_use_parameter=args.run_use_parameter,
         run_use_context=args.run_use_context,
+        use_local=args.use_local,
     )
     json.dump(results, open(output_path, "w"), indent=4, ensure_ascii=False)
 

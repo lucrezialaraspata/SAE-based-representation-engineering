@@ -28,12 +28,48 @@ def load_jsonl(path):
     return data
 
 
+def get_sae_weight_dir(
+    model_ref: str,
+    *,
+    model_dir: Union[str, os.PathLike[Any]] = HF_DEFAULT_HOME,
+    revision: str = "main",
+    repo_type="models",
+    layer_id=0,
+) -> Path:
+    """
+    Parse model name to locally stored weights.
+    Args:
+        model_ref (str) : Model reference containing org_name/model_name such as 'meta-llama/Llama-2-7b-chat-hf'.
+        revision (str): Model revision branch. Defaults to 'main'.
+        model_dir (str | os.PathLike[Any]): Path to directory where models are stored. Defaults to value of $HF_HOME (or present directory)
+
+    Returns:
+        str: path to model weights within model directory
+    """
+    model_dir = Path(model_dir)
+    assert model_dir.is_dir(), f"Model directory {model_dir} does not exist or is not a directory."
+
+    model_path = Path(os.path.join(model_dir, "hub", "--".join([repo_type, *model_ref.split("/")])))
+    assert model_path.is_dir(), f"Model path {model_path} does not exist or is not a directory."
+    
+    snapshot_hash = (model_path / "refs" / revision).read_text()
+    weight_dir = model_path / "snapshots" / snapshot_hash
+    assert weight_dir.is_dir(), f"Weight directory {weight_dir} does not exist or is not a directory."
+
+    layer_weight_dir = weight_dir / f"layers.{layer_id}"
+    assert layer_weight_dir.is_dir(), f"Layer weight directory {layer_weight_dir} does not exist or is not a directory."
+
+    return layer_weight_dir
+
+
 def get_weight_dir(
     model_ref: str,
     *,
     model_dir: Union[str, os.PathLike[Any]] = HF_DEFAULT_HOME,
     revision: str = "main",
-    repo_type="models"
+    repo_type="models",
+    dataset_extension="json",
+    subset=None,
 ) -> Path:
     """
     Parse model name to locally stored weights.
@@ -56,10 +92,16 @@ def get_weight_dir(
     assert weight_dir.is_dir(), f"Weight directory {weight_dir} does not exist or is not a directory."
 
     if repo_type == "datasets":
-        # For datasets, we need to return the directory containing the dataset files
-        weight_dir = weight_dir / "data"
+        if subset is not None:
+            weight_dir = weight_dir / subset
+        else:
+            # For datasets, we need to return the directory containing the dataset files
+            if dataset_extension == "json":
+                weight_dir = weight_dir / "data"
     
     return weight_dir
+
+
 
 
 def load_model(model_path, flash_attn, not_return_model=False, use_local=False):
@@ -164,12 +206,22 @@ def init_frozen_language_model(model_path, attn_imp="flash_attention_2"):
     tokenizer.pad_token = tokenizer.eos_token
     return model, tokenizer
 
+def load_sae(sae_name, layer_id, use_local=False):
+    if not use_local:
+        sae = Sae.load_from_hub(sae_name, hookpoint=f"layers.{layer_id}")
+    else:
+        sae_path = get_sae_weight_dir(sae_name, layer_id=layer_id)
+        sae = Sae.load_from_disk(sae_path)
 
-def load_frozen_sae(layer_idx, model_name):
-    if model_name == "Llama-3.1-8B":
-        sae = Sae.load_from_hub("EleutherAI/sae-llama-3-8b-32x", hookpoint=f"layers.{layer_idx}")
+    sae = sae.to("cuda")
+
+    return sae
+
+def load_frozen_sae(layer_idx, model_name, use_local=False):
+    if model_name == "Meta-Llama-3-8B":
+        sae = load_sae("EleutherAI/sae-llama-3-8b-32x", layer_idx, use_local=use_local)
     elif model_name == "Llama-2-7b-hf":
-        sae = Sae.load_from_hub("yuzhaouoe/Llama2-7b-SAE", hookpoint=f"layers.{layer_idx}")
+        sae = load_sae("yuzhaouoe/Llama2-7b-SAE", layer_idx, use_local=use_local)
     elif model_name == "gemma-2-9b":
         sae, cfg_dict, sparsity = EleutherSae.from_pretrained(
             release="gemma-scope-9b-pt-res-canonical",

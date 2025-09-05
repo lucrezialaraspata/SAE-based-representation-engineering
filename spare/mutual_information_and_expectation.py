@@ -32,6 +32,7 @@ def get_args():
     parser.add_argument("--minmax_normalisation", action="store_true")
     parser.add_argument("--equal_label_examples", action="store_true")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--use_local", action="store_true")
 
     return parser.parse_args()
 
@@ -118,7 +119,7 @@ def main():
     args = get_args()
     logger.info(f"\n{json.dumps(vars(args), indent=4)}")
     model_name = os.path.basename(args.model_path)
-    sae = load_frozen_sae(args.layer_idx, model_name)
+    sae = load_frozen_sae(args.layer_idx, model_name, use_local=args.use_local)
     mutual_information_correlation(
         num_proc=args.num_proc,
         model_name=model_name,

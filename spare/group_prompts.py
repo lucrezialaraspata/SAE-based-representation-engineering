@@ -30,8 +30,8 @@ def get_args():
 @torch.inference_mode()
 def group_prompts_based_on_behaviours(seeds_to_encode, model_path, k_shot, save_dir_name, use_local=False):
     model_name = os.path.basename(model_path)
-    data, memorised_set = load_dataset_and_memorised_set("nqswap", model_name)
-    model, tokenizer = load_model(model_path, True)
+    data, memorised_set = load_dataset_and_memorised_set("nqswap", model_name, use_local=use_local)
+    model, tokenizer = load_model(model_path, False, use_local=use_local)
     line_break_id = tokenizer.encode("\n\n", add_special_tokens=False)[-1]
     generation_kwargs = {"max_new_tokens": 12, "do_sample": False, "eos_token_id": line_break_id,
                          "pad_token_id": line_break_id, "use_cache": True, "temperature": None, "top_p": None}

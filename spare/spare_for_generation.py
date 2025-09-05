@@ -7,7 +7,7 @@ from tqdm import tqdm
 from transformers import AutoTokenizer
 from spare.local_datasets.function_extraction_datasets import REODQADataset, EncodeREODQADataset
 from spare.patch_utils import PatchOutputContext
-from spare.utils import init_frozen_language_model, load_frozen_sae
+from spare.utils import load_model, load_frozen_sae
 from spare.sae import Sae
 from spare.utils import PROJ_DIR
 from spare.function_extraction_modellings.function_extractor import FunctionExtractor
@@ -328,16 +328,17 @@ def run_sae_patching_evaluate(
         run_use_parameter=True,
         run_use_context=True,
         debug_num_examples=None,
+        use_local=False,
 ):
     model_name = os.path.basename(model_path)
-    model, tokenizer = init_frozen_language_model(model_path)
+    model, tokenizer = load_model(model_path, False, use_local=use_local)
 
     # step-1: load function weights, some positions will be selected to control the generation in step-3
     all_use_context_weight, all_use_parameter_weight = [], []
     all_sae = []
     for layer_idx in layer_ids:
         logger.info(f"load function weights layer{layer_idx}")
-        sae = load_frozen_sae(layer_idx, model_name)
+        sae = load_frozen_sae(layer_idx, model_name, use_local=use_local)
         use_context_weight, use_parameter_weight = load_hiddens_and_get_function_weights(
             model_name, layer_idx, sae, hiddens_name,
         )
@@ -383,7 +384,7 @@ def run_sae_patching_evaluate(
         inspect_module.append(f'model.layers.{layer_idx}')
 
     logger.info("load dataset")
-    data, memorised_set = load_dataset_and_memorised_set(data_name, model_name)
+    data, memorised_set = load_dataset_and_memorised_set(data_name, model_name, use_local=use_local)
     re_odqa_dataset = REODQADataset(
         tokenizer=tokenizer,
         data=data,

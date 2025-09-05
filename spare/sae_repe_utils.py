@@ -8,6 +8,7 @@ from tqdm import tqdm
 from spare.eval_utils import sub_ans_exact_match_score_with_macnoise_subcontext as macnoise_sub_em
 from spare.eval_utils import exact_match_score_with_multiple_candidates as em
 import logging
+from spare.utils import get_weight_dir
 
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s %(name)s %(lineno)s: %(message)s",
@@ -195,9 +196,14 @@ def load_grouped_prompts(model_name, results_save_dir_name="grouped_prompts",
     return pred_sub_answer_data, pred_org_answer_data, load_files
 
 
-def load_dataset_and_memorised_set(data_name, model_name):
+def load_dataset_and_memorised_set(data_name, model_name, use_local=False):
     if data_name == "nqswap":
-        data = datasets.load_dataset("pminervini/NQ-Swap")["dev"]
+        if not use_local:
+            data = datasets.load_dataset("pminervini/NQ-Swap")["dev"]
+        else:
+            local_model_path = get_weight_dir("pminervini/NQ-Swap", repo_type="datasets")
+            data = datasets.load_dataset("parquet", data_dir=local_model_path)["validation"]
+
         data = [_ for _ in data]
         idx2data = dict()
         for idx, item in enumerate(data):

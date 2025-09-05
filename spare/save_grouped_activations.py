@@ -2,7 +2,7 @@ import os
 from tqdm import tqdm
 from spare.local_datasets.function_extraction_datasets import EncodeREODQADataset
 from spare.patch_utils import InspectOutputContext
-from spare.utils import PROJ_DIR, init_frozen_language_model
+from spare.utils import PROJ_DIR, load_model
 from spare.group_prompts import load_dataset_and_memorised_set
 from spare.sae_repe_utils import load_grouped_prompts
 import torch
@@ -31,13 +31,14 @@ def get_args():
 
     # encode data and save to save_hiddens_name
     parser.add_argument("--save_hiddens_name", type=str, required=True)
+    parser.add_argument("--use_local", action='store_true', default=False)
 
     return parser.parse_args()
 
 
 @torch.inference_mode()
 def save_grouped_hiddens(tokenizer, model, model_name, data_name, save_hiddens_name,
-                         load_data_name, shots_to_encode, seeds_to_encode):
+                         load_data_name, shots_to_encode, seeds_to_encode, use_local=False):
     num_layers = len(model.model.layers)
     inspect_modules = [f'model.layers.{layer_idx}' for layer_idx in range(num_layers)]
 
@@ -48,7 +49,7 @@ def save_grouped_hiddens(tokenizer, model, model_name, data_name, save_hiddens_n
         seeds_to_encode
     )
 
-    data, memorised_set = load_dataset_and_memorised_set(data_name, model_name)
+    data, memorised_set = load_dataset_and_memorised_set(data_name, model_name, use_local=use_local)
     encode_re_odqa_dataset = EncodeREODQADataset(
         tokenizer=tokenizer,
         data=data,
@@ -95,7 +96,7 @@ def main():
     args = get_args()
     logger.info(f"\n{json.dumps(vars(args), indent=4)}")
     model_name = os.path.basename(args.model_path)
-    model, tokenizer = init_frozen_language_model(args.model_path)
+    model, tokenizer = load_model(args.model_path, False, use_local=args.use_local)
     save_grouped_hiddens(
         tokenizer=tokenizer,
         model=model,
@@ -105,6 +106,7 @@ def main():
         load_data_name=args.load_data_name,
         shots_to_encode=args.shots_to_encode,
         seeds_to_encode=args.seeds_to_encode,
+        use_local=args.use_local
     )
 
 
